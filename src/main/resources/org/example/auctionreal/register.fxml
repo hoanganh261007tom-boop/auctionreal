@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
+
+<!--
+  AnchorPane: Là cái "khung tranh" chính của cửa sổ.
+  fx:controller: Liên kết tệp thiết kế này với tệp xử lý RegisterController.java.
+  Bản chất: Nói cho JavaFX biết "Bộ não" điều khiển màn hình này nằm ở đâu.
+-->
+<AnchorPane prefHeight="400.0" prefWidth="600.0"
+            xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="org.example.auctionreal.RegisterController">
+    <children>
+        <!--
+          VBox: Sắp xếp các linh kiện (Label, TextField, Button) theo hàng dọc từ trên xuống.
+          spacing="15.0": Tạo khoảng cách 15 pixel giữa các linh kiện để giao diện thoáng đãng.
+        -->
+        <VBox alignment="CENTER" layoutX="175.0" layoutY="60.0" prefWidth="250.0" spacing="15.0">
+            <children>
+                <!-- Tiêu đề của màn hình -->
+                <Label text="ĐĂNG KÝ HỆ THỐNG">
+                    <font>
+                        <Font name="System Bold" size="20.0" />
+                    </font>
+                </Label>
+
+                <!--
+                   TextField: Ô nhập văn bản bình thường.
+                   fx:id: Định danh để bên Java có thể gọi ra (phải khớp 100% với biến trong Controller).
+                   promptText: Dòng chữ mờ gợi ý cho người dùng biết cần nhập gì.
+                -->
+                <TextField fx:id="txtId" promptText="Nhập ID (ví dụ: U001)" />
+
+                <TextField fx:id="txtUsername" promptText="Nhập Tên người dùng" />
+
+                <!--
+                   PasswordField: Ô nhập mật khẩu đặc biệt.
+                   Bản chất: Tự động biến các chữ thành dấu chấm tròn để bảo mật.
+                -->
+                <PasswordField fx:id="txtPassword" promptText="Mật khẩu (ít nhất 4 ký tự)" />
+
+                <!--
+                   Button: Nút bấm để thực hiện hành động.
+                   onAction: Khi nhấn nút, Java sẽ tìm đến hàm có tên sau dấu # (#handleRegister).
+                -->
+                <Button mnemonicParsing="false" onAction="#handleRegister"
+                        prefWidth="150.0"
+                        style="-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand;"
+                        text="Tiếp theo" />
+
+            </children>
+        </VBox>
+    </children>
+</AnchorPane>
