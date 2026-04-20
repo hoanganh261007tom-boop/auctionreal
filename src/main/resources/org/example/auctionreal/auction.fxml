@@ -1,0 +1,214 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
+<?import javafx.scene.image.*?>
+<?import javafx.geometry.*?>
+
+<AnchorPane prefHeight="700.0" prefWidth="900.0"
+            style="-fx-background-color: #0f0f1a;"
+            xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="org.example.auctionreal.AuctionController">
+    <children>
+
+        <!-- Thanh tiêu đề trên cùng -->
+        <HBox layoutX="0" layoutY="0" prefWidth="900" prefHeight="60" alignment="CENTER_LEFT" spacing="20"
+              style="-fx-background-color: #1a1a2e; -fx-padding: 0 30 0 30;">
+            <children>
+                <Label text="⚡ AUCTION LIVE"
+                       style="-fx-text-fill: #f0c040; -fx-font-size: 20px; -fx-font-weight: bold; -fx-font-family: 'System';"/>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Label fx:id="lblUserInfo"
+                       style="-fx-text-fill: #aaaacc; -fx-font-size: 14px;"/>
+                <Button text="← Quay lại" onAction="#handleBack"
+                        style="-fx-background-color: transparent; -fx-text-fill: #aaaacc; -fx-font-size: 13px; -fx-cursor: hand; -fx-underline: true;"/>
+            </children>
+        </HBox>
+
+
+        <!-- Nội dung chính -->
+        <HBox layoutX="20" layoutY="70" prefWidth="860" prefHeight="610" spacing="20">
+            <children>
+
+                <!-- Cột trái: Thông tin sản phẩm -->
+                <VBox prefWidth="430" prefHeight="600" spacing="15"
+                      style="-fx-background-color: #1a1a2e; -fx-background-radius: 16; -fx-padding: 25;">
+                    <children>
+
+                        <!-- Badge LIVE -->
+                        <HBox alignment="CENTER_LEFT" spacing="10">
+                            <children>
+                                <Label text="● ĐANG ĐẤU GIÁ"
+                                       style="-fx-text-fill: #ff4444; -fx-font-size: 12px; -fx-font-weight: bold; -fx-background-color: #3a1a1a; -fx-background-radius: 20; -fx-padding: 4 12 4 12;"/>
+                                <Label text="Phiên #2024"
+                                       style="-fx-text-fill: #666688; -fx-font-size: 12px;"/>
+                            </children>
+                        </HBox>
+
+                        <!-- Tên sản phẩm -->
+                        <Label text="Rolex Submariner Date"
+                               style="-fx-text-fill: #ffffff; -fx-font-size: 26px; -fx-font-weight: bold; -fx-font-family: 'System';"/>
+                        <Label text="Ref. 126610LN • Stainless Steel • 2023"
+                               style="-fx-text-fill: #9999bb; -fx-font-size: 14px;"/>
+
+                        <!-- Hình ảnh placeholder đẹp -->
+                        <StackPane prefHeight="220" prefWidth="380"
+                                   style="-fx-background-color: #12122a; -fx-background-radius: 12;">
+                            <children>
+                                <VBox alignment="CENTER" spacing="10">
+                                    <children>
+                                        <Label text="🕰"
+                                               style="-fx-font-size: 90px;"/>
+                                        <Label text="ROLEX  SUBMARINER"
+                                               style="-fx-text-fill: #f0c040; -fx-font-size: 13px; -fx-font-weight: bold; -fx-letter-spacing: 3;"/>
+                                    </children>
+                                </VBox>
+                            </children>
+                        </StackPane>
+
+                        <!-- Mô tả sản phẩm -->
+                        <Label text="Mô tả sản phẩm" style="-fx-text-fill: #aaaacc; -fx-font-size: 13px; -fx-font-weight: bold;"/>
+                        <Label text="Đồng hồ lặn biểu tượng của Rolex, bezel ceramic đen, mặt số đen Oystersteel. Chống nước 300m. Kèm hộp &amp; giấy tờ đầy đủ. Tình trạng: Mới 98%."
+                               wrapText="true"
+                               style="-fx-text-fill: #888899; -fx-font-size: 13px;"/>
+
+                        <!-- Tags -->
+                        <HBox spacing="8">
+                            <children>
+                                <Label text="Mới 98%" style="-fx-text-fill: #4af0a0; -fx-background-color: #0a2a1a; -fx-background-radius: 8; -fx-padding: 3 10 3 10; -fx-font-size: 12px;"/>
+                                <Label text="Chính hãng" style="-fx-text-fill: #4ab0f0; -fx-background-color: #0a1a2a; -fx-background-radius: 8; -fx-padding: 3 10 3 10; -fx-font-size: 12px;"/>
+                                <Label text="Có bảo hành" style="-fx-text-fill: #f0c040; -fx-background-color: #2a200a; -fx-background-radius: 8; -fx-padding: 3 10 3 10; -fx-font-size: 12px;"/>
+                            </children>
+                        </HBox>
+
+                    </children>
+                </VBox>
+
+                <!-- Cột phải: Đấu giá -->
+                <VBox prefWidth="410" prefHeight="600" spacing="14"
+                      style="-fx-background-color: #1a1a2e; -fx-background-radius: 16; -fx-padding: 25;">
+                    <children>
+
+                        <!-- Đồng hồ đếm ngược -->
+                        <VBox alignment="CENTER" spacing="5"
+                              style="-fx-background-color: #12122a; -fx-background-radius: 12; -fx-padding: 18;">
+                            <children>
+                                <Label text="PHIÊN ĐẤU GIÁ KẾT THÚC TRONG"
+                                       style="-fx-text-fill: #666688; -fx-font-size: 11px; -fx-font-weight: bold;"/>
+                                <Label fx:id="lblCountdown" text="01 : 59 : 59"
+                                       style="-fx-text-fill: #f0c040; -fx-font-size: 40px; -fx-font-weight: bold; -fx-font-family: 'Monospaced';"/>
+                                <Label text="GIỜ  :  PHÚT  :  GIÂY"
+                                       style="-fx-text-fill: #444466; -fx-font-size: 10px;"/>
+                            </children>
+                        </VBox>
+
+                        <!-- Giá hiện tại -->
+                        <VBox spacing="4"
+                              style="-fx-background-color: #0d1f0d; -fx-background-radius: 12; -fx-padding: 18;">
+                            <children>
+                                <Label text="GIÁ CAO NHẤT HIỆN TẠI"
+                                       style="-fx-text-fill: #4af0a0; -fx-font-size: 11px; -fx-font-weight: bold;"/>
+                                <HBox alignment="CENTER_LEFT" spacing="10">
+                                    <children>
+                                        <Label fx:id="lblCurrentPrice" text="285.000.000 ₫"
+                                               style="-fx-text-fill: #ffffff; -fx-font-size: 30px; -fx-font-weight: bold;"/>
+                                    </children>
+                                </HBox>
+                                <Label fx:id="lblTopBidder" text="người đặt: Chưa có ai"
+                                       style="-fx-text-fill: #7aaa7a; -fx-font-size: 12px;"/>
+                            </children>
+                        </VBox>
+
+                        <!-- Thông tin thêm -->
+                        <HBox spacing="10">
+                            <children>
+                                <VBox alignment="CENTER" prefWidth="120"
+                                      style="-fx-background-color: #12122a; -fx-background-radius: 10; -fx-padding: 12;">
+                                    <children>
+                                        <Label text="GIÁ KHỞI ĐIỂM"
+                                               style="-fx-text-fill: #555577; -fx-font-size: 10px; -fx-font-weight: bold;"/>
+                                        <Label text="250.000.000 ₫"
+                                               style="-fx-text-fill: #aaaacc; -fx-font-size: 12px; -fx-font-weight: bold;"/>
+                                    </children>
+                                </VBox>
+                                <VBox alignment="CENTER" prefWidth="120"
+                                      style="-fx-background-color: #12122a; -fx-background-radius: 10; -fx-padding: 12;">
+                                    <children>
+                                        <Label text="BƯỚC GIÁ TỐI THIỂU"
+                                               style="-fx-text-fill: #555577; -fx-font-size: 10px; -fx-font-weight: bold;"/>
+                                        <Label text="1.000.000 ₫"
+                                               style="-fx-text-fill: #aaaacc; -fx-font-size: 12px; -fx-font-weight: bold;"/>
+                                    </children>
+                                </VBox>
+                                <VBox alignment="CENTER" prefWidth="120"
+                                      style="-fx-background-color: #12122a; -fx-background-radius: 10; -fx-padding: 12;">
+                                    <children>
+                                        <Label text="LƯỢT ĐẶT GIÁ"
+                                               style="-fx-text-fill: #555577; -fx-font-size: 10px; -fx-font-weight: bold;"/>
+                                        <Label fx:id="lblBidCount" text="0 lượt"
+                                               style="-fx-text-fill: #aaaacc; -fx-font-size: 12px; -fx-font-weight: bold;"/>
+                                    </children>
+                                </VBox>
+                            </children>
+                        </HBox>
+
+                        <!-- Khu vực đặt giá -->
+                        <VBox spacing="10"
+                              style="-fx-background-color: #12122a; -fx-background-radius: 12; -fx-padding: 18;">
+                            <children>
+                                <Label text="💰 ĐẶT GIÁ CỦA BẠN"
+                                       style="-fx-text-fill: #f0c040; -fx-font-size: 13px; -fx-font-weight: bold;"/>
+                                <HBox spacing="10" alignment="CENTER_LEFT">
+                                    <children>
+                                        <TextField fx:id="txtBidAmount"
+                                                   promptText="Nhập số tiền (VD: 286000000)"
+                                                   prefHeight="42" prefWidth="230"
+                                                   style="-fx-background-color: #1e1e3a; -fx-text-fill: #ffffff; -fx-prompt-text-fill: #555577; -fx-border-color: #333355; -fx-border-radius: 8; -fx-background-radius: 8; -fx-padding: 0 12 0 12; -fx-font-size: 14px;"/>
+                                        <Button text="ĐẶT GIÁ" onAction="#handleBid"
+                                                prefHeight="42" prefWidth="110"
+                                                style="-fx-background-color: #f0c040; -fx-text-fill: #0f0f1a; -fx-font-weight: bold; -fx-font-size: 14px; -fx-background-radius: 8; -fx-cursor: hand;"/>
+                                    </children>
+                                </HBox>
+
+                                <!-- Nút gợi ý nhanh -->
+                                <HBox spacing="8">
+                                    <children>
+                                        <Label text="Gợi ý nhanh:" style="-fx-text-fill: #555577; -fx-font-size: 12px;"/>
+                                        <Button text="+1M" onAction="#handleQuickBid1"
+                                                style="-fx-background-color: #1e2a3a; -fx-text-fill: #4ab0f0; -fx-font-size: 11px; -fx-background-radius: 6; -fx-cursor: hand; -fx-padding: 3 8 3 8;"/>
+                                        <Button text="+5M" onAction="#handleQuickBid5"
+                                                style="-fx-background-color: #1e2a3a; -fx-text-fill: #4ab0f0; -fx-font-size: 11px; -fx-background-radius: 6; -fx-cursor: hand; -fx-padding: 3 8 3 8;"/>
+                                        <Button text="+10M" onAction="#handleQuickBid10"
+                                                style="-fx-background-color: #1e2a3a; -fx-text-fill: #4ab0f0; -fx-font-size: 11px; -fx-background-radius: 6; -fx-cursor: hand; -fx-padding: 3 8 3 8;"/>
+                                        <Button text="+50M" onAction="#handleQuickBid50"
+                                                style="-fx-background-color: #2a1e3a; -fx-text-fill: #c080f0; -fx-font-size: 11px; -fx-background-radius: 6; -fx-cursor: hand; -fx-padding: 3 8 3 8;"/>
+                                    </children>
+                                </HBox>
+
+                                <Label fx:id="lblMessage" text=""
+                                       wrapText="true"
+                                       style="-fx-font-size: 13px; -fx-font-weight: bold;"/>
+                            </children>
+                        </VBox>
+
+                        <!-- Lịch sử đặt giá -->
+                        <VBox spacing="8" VBox.vgrow="ALWAYS">
+                            <children>
+                                <Label text="📋 LỊCH SỬ ĐẶT GIÁ"
+                                       style="-fx-text-fill: #aaaacc; -fx-font-size: 12px; -fx-font-weight: bold;"/>
+                                <ListView fx:id="listBidHistory"
+                                          prefHeight="155"
+                                          style="-fx-background-color: #12122a; -fx-background-radius: 10; -fx-border-color: #222244; -fx-border-radius: 10; -fx-control-inner-background: #12122a; -fx-font-size: 12px;"/>
+                            </children>
+                        </VBox>
+
+                    </children>
+                </VBox>
+
+            </children>
+        </HBox>
+
+    </children>
+</AnchorPane>
