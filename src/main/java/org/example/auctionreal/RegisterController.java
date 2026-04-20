@@ -57,7 +57,7 @@ public class RegisterController {
             throw new IOException("Không tìm thấy file FXML tại: " + fxmlPath);
         }
 
-        Parent root = FXMLLoader.load(location);
+        Parent root = FXMLLoader.load(getClass().getResource("role-selection.fxml"));
         Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
         stage.setScene(new Scene(root));
         stage.setTitle("Lựa chọn vai trò người dùng");
