@@ -31,14 +31,36 @@ public class AuctionController {
     @FXML private TextField txtBidAmount;
     @FXML private ListView<String> listBidHistory;
 
-    // --- Dữ liệu nghiệp vụ ---
-    private double currentPrice = 285_000_000.0;   // Giá khởi điểm ban đầu (đã có ai đặt)
-    private static final double MIN_STEP = 1_000_000.0; // Bước giá tối thiểu 1 triệu
+    // --- Labels hiển thị thông tin vật phẩm (được set fx:id trong FXML) ---
+    @FXML private Label lblItemName;
+    @FXML private Label lblItemSubtitle;
+    @FXML private Label lblItemEmoji;
+    @FXML private Label lblItemBrand;
+    @FXML private Label lblItemDescription;
+    @FXML private Label lblStartPrice;
+    @FXML private Label lblMinStep;
+
+    // =========================================================
+    // Static fields: BidderDashboardController truyền dữ liệu
+    // vật phẩm được chọn vào đây trước khi load auction.fxml
+    // =========================================================
+    public static String  selectedName        = "Rolex Submariner Date";
+    public static String  selectedSubtitle     = "Ref. 126610LN \u2022 Stainless Steel \u2022 2023";
+    public static String  selectedEmoji        = "\uD83D\uDD70";  // 🕰
+    public static String  selectedBrand        = "ROLEX  SUBMARINER";
+    public static String  selectedDescription  = "\u0110\u1ed3ng h\u1ed3 l\u1eb7n bi\u1ec3u t\u01b0\u1ee3ng c\u1ee7a Rolex. T\u00ecnh tr\u1ea1ng: M\u1edbi 98%.";
+    public static double  selectedStartPrice   = 285_000_000.0;
+    public static double  selectedMinStep      = 1_000_000.0;
+    public static int     selectedDuration     = 2; // giờ
+
+    // --- Dữ liệu nghiệp vụ (lấy từ static fields được truyền vào) ---
+    private double currentPrice;          // Giá khởi điểm ban đầu
+    private double MIN_STEP;              // Bước giá tối thiểu
     private String topBidder = "Chưa có ai";
     private int bidCount = 0;
 
-    // --- Đếm ngược: 2 tiếng ---
-    private int totalSeconds = 2 * 60 * 60; // 2 giờ = 7200 giây
+    // --- Đếm ngược: lấy từ selectedDuration ---
+    private int totalSeconds; // sẽ được set trong initialize()
     private Timeline countdownTimer;
 
     private final NumberFormat currencyFormat =
@@ -46,6 +68,19 @@ public class AuctionController {
 
     @FXML
     public void initialize() {
+        // ---- Áp dụng dữ liệu vật phẩm được chọn từ BidderDashboard ----
+        currentPrice = selectedStartPrice;
+        MIN_STEP     = selectedMinStep;
+        totalSeconds = selectedDuration * 3600;
+
+        if (lblItemName        != null) lblItemName.setText(selectedName);
+        if (lblItemSubtitle    != null) lblItemSubtitle.setText(selectedSubtitle);
+        if (lblItemEmoji       != null) lblItemEmoji.setText(selectedEmoji);
+        if (lblItemBrand       != null) lblItemBrand.setText(selectedBrand.toUpperCase());
+        if (lblItemDescription != null) lblItemDescription.setText(selectedDescription);
+        if (lblStartPrice      != null) lblStartPrice.setText(formatMoney(selectedStartPrice) + " ₫");
+        if (lblMinStep         != null) lblMinStep.setText(formatMoney(selectedMinStep) + " ₫");
+
         // Hiển thị thông tin người dùng hiện tại
         User user = RegisterController.currentUser;
         if (user != null) {

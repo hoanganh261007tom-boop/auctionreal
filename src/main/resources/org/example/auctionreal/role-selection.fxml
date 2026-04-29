@@ -9,9 +9,9 @@
   fx:controller: Phải khớp chính xác với class RoleSelectionController bạn sẽ tạo.
 -->
 
-<AnchorPane prefHeight="400.0" prefWidth="600.0" style="-fx-background-color: #f0f2f5;" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="org.example.auctionreal.RoleSelectionController">
+<AnchorPane prefHeight="400.0" prefWidth="600.0" style="-fx-background-color: #0f0f1a;" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="org.example.auctionreal.RoleSelectionController">
     <children>
-        <VBox alignment="CENTER" layoutX="75.0" layoutY="50.0" prefHeight="300.0" prefWidth="450.0" spacing="25.0" style="-fx-background-color: white; -fx-background-radius: 20; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 10);">
+        <VBox alignment="CENTER" layoutX="75.0" layoutY="50.0" prefHeight="300.0" prefWidth="450.0" spacing="25.0" style="-fx-background-color: #1a1a2e; -fx-background-radius: 20; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 10);">
             <children>
                 <VBox alignment="CENTER" spacing="8.0">
                     <children>

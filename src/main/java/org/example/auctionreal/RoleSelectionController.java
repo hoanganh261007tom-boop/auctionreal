@@ -13,7 +13,6 @@ import user.Seller;
 import user.User;
 
 import java.io.IOException;
-import java.net.URL;
 
 /**
  * RoleSelectionController: Xử lý logic khi người dùng chọn làm Người bán hoặc Người mua.
@@ -40,40 +39,44 @@ public class RoleSelectionController {
         // Chuyển đổi sang đối tượng Seller (giữ ID, Name từ Register)
         RegisterController.currentUser = new Seller(temp.getId(), temp.getUsername(), "n/a", "Seller");
         System.out.println("Hệ thống: Bạn đã chọn vai trò SELLER");
-        // Tiến hành chuyển sang màn hình Dashboard của Seller tại đây
+        // Chuyển sang Seller Dashboard
         try {
-            switchToAuction(event);
+            switchToScreen(event, "seller-dashboard.fxml", "🏪 Seller Dashboard", 1000, 700);
         } catch (IOException e) {
             System.err.println("Lỗi không chuyển được trang: " + e.getMessage());
             e.printStackTrace();
         }
-
     }
 
     @FXML
     void handleSelectBidder(ActionEvent event) {
         User temp = RegisterController.currentUser;
-        // Chuyển đổi sang đối tượng Bidder với số dư mặc định 1000.0
-        RegisterController.currentUser = new Bidder(temp.getId(), temp.getUsername(), "n/a", 1000.0);
+        // Chuyển đổi sang đối tượng Bidder với số dư mặc định 50.000.000 ₫
+        RegisterController.currentUser = new Bidder(temp.getId(), temp.getUsername(), "n/a", 50_000_000.0);
         System.out.println("Hệ thống: Bạn đã chọn vai trò BIDDER");
-        // Tiến hành chuyển sang màn hình Dashboard của Bidder tại đây
+        // Chuyển sang Bidder Dashboard
         try {
-            switchToAuction(event);
-        } catch (IOException e){
-            System.err.println("looix ko chuyển được trang: "+ e.getMessage());
+            switchToScreen(event, "bidder-dashboard.fxml", "🔍 Bidder Dashboard", 1000, 700);
+        } catch (IOException e) {
+            System.err.println("Lỗi không chuyển được trang: " + e.getMessage());
             e.printStackTrace();
         }
     }
-    private void switchToAuction(ActionEvent event) throws IOException {
-        URL fxmlUrl = getClass().getResource("auction.fxml");
+
+    /**
+     * switchToScreen: Hàm tiện ích chuyển sang bất kỳ màn hình FXML nào.
+     */
+    private void switchToScreen(ActionEvent event, String fxmlFile, String title,
+                                double width, double height) throws IOException {
+        java.net.URL fxmlUrl = getClass().getResource(fxmlFile);
         if (fxmlUrl == null) {
-            System.err.println("Lỗi: Không tìm thấy auction.fxml!");
+            System.err.println("Lỗi: Không tìm thấy " + fxmlFile + "!");
             return;
         }
         Parent root = FXMLLoader.load(fxmlUrl);
         Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
-        stage.setScene(new Scene(root, 900, 700));
-        stage.setTitle("Hệ Thống Đấu Giá - LIVE");
+        stage.setScene(new Scene(root, width, height));
+        stage.setTitle(title);
         stage.show();
     }
 
