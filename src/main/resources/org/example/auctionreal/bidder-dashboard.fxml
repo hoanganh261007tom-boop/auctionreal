@@ -11,7 +11,7 @@
   Bidder có thể xem tất cả vật phẩm đang đấu giá, tìm kiếm, và nhấn vào để vào phòng đấu giá.
   fx:controller: Liên kết với BidderDashboardController.java
 -->
-<AnchorPane prefHeight="700.0" prefWidth="1000.0"
+<AnchorPane minHeight="700.0" minWidth="1000.0"
             style="-fx-background-color: #0f0f1a;"
             xmlns="http://javafx.com/javafx/21"
             xmlns:fx="http://javafx.com/fxml/1"
@@ -42,7 +42,7 @@
         </HBox>
 
         <!-- ===== NỘI DUNG CHÍNH ===== -->
-        <VBox layoutX="20" layoutY="80" prefWidth="960" prefHeight="600" spacing="16">
+        <VBox AnchorPane.topAnchor="80" AnchorPane.leftAnchor="20" AnchorPane.rightAnchor="20" AnchorPane.bottomAnchor="10" spacing="16">
             <children>
 
                 <!-- ===== THANH TÌM KIẾM & BỘ LỌC ===== -->
@@ -97,8 +97,8 @@
                 <HBox spacing="14">
                     <children>
                         <!-- Đang diễn ra -->
-                        <VBox alignment="CENTER" prefWidth="220"
-                              style="-fx-background-color: #1a1a2e; -fx-background-radius: 12; -fx-padding: 18;">
+                        <VBox alignment="CENTER" HBox.hgrow="ALWAYS"
+                              style="-fx-background-color: #1a1a2e; -fx-background-radius: 12; -fx-padding: 14;">
                             <children>
                                 <Label text="● ĐANG ĐẤU GIÁ"
                                        style="-fx-text-fill: #ff4444; -fx-font-size: 11px; -fx-font-weight: bold;"/>
@@ -109,8 +109,8 @@
                             </children>
                         </VBox>
                         <!-- Sắp kết thúc -->
-                        <VBox alignment="CENTER" prefWidth="220"
-                              style="-fx-background-color: #1a1a2e; -fx-background-radius: 12; -fx-padding: 18;">
+                        <VBox alignment="CENTER" HBox.hgrow="ALWAYS"
+                              style="-fx-background-color: #1a1a2e; -fx-background-radius: 12; -fx-padding: 14;">
                             <children>
                                 <Label text="⏰ SẮP KẾT THÚC"
                                        style="-fx-text-fill: #f0c040; -fx-font-size: 11px; -fx-font-weight: bold;"/>
@@ -121,8 +121,8 @@
                             </children>
                         </VBox>
                         <!-- Tôi đang dẫn đầu -->
-                        <VBox alignment="CENTER" prefWidth="220"
-                              style="-fx-background-color: #1a1a2e; -fx-background-radius: 12; -fx-padding: 18;">
+                        <VBox alignment="CENTER" HBox.hgrow="ALWAYS"
+                              style="-fx-background-color: #1a1a2e; -fx-background-radius: 12; -fx-padding: 14;">
                             <children>
                                 <Label text="🏆 TÔI ĐANG DẪN ĐẦU"
                                        style="-fx-text-fill: #4af0a0; -fx-font-size: 11px; -fx-font-weight: bold;"/>
@@ -133,8 +133,8 @@
                             </children>
                         </VBox>
                         <!-- Tổng vật phẩm có sẵn -->
-                        <VBox alignment="CENTER" prefWidth="220"
-                              style="-fx-background-color: #1a1a2e; -fx-background-radius: 12; -fx-padding: 18;">
+                        <VBox alignment="CENTER" HBox.hgrow="ALWAYS"
+                              style="-fx-background-color: #1a1a2e; -fx-background-radius: 12; -fx-padding: 14;">
                             <children>
                                 <Label text="🏷 TỔNG VẬT PHẨM"
                                        style="-fx-text-fill: #aaaacc; -fx-font-size: 11px; -fx-font-weight: bold;"/>
@@ -152,7 +152,7 @@
                     <children>
 
                         <!-- DANH SACH VAT PHAM ben trai -->
-                        <VBox prefWidth="530" VBox.vgrow="ALWAYS" spacing="10"
+                        <VBox HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS" spacing="10"
                               style="-fx-background-color: #1a1a2e; -fx-background-radius: 16; -fx-padding: 20;">
                             <children>
 
@@ -197,90 +197,99 @@
                         </VBox>
 
                         <!-- PANEL CHI TIET VAT PHAM ben phai -->
-                        <VBox prefWidth="400" VBox.vgrow="ALWAYS" spacing="14"
-                              style="-fx-background-color: #1a1a2e; -fx-background-radius: 16; -fx-padding: 22;">
+                        <VBox prefWidth="380" VBox.vgrow="ALWAYS" spacing="8"
+                              style="-fx-background-color: #1a1a2e; -fx-background-radius: 16; -fx-padding: 14;">
                             <children>
 
-                                <!-- Badge trạng thái -->
-                                <HBox alignment="CENTER_LEFT" spacing="10">
-                                    <children>
-                                        <Label fx:id="lblStatusBadge" text="● ĐANG ĐẤU GIÁ"
-                                               style="-fx-text-fill: #ff4444; -fx-font-size: 12px; -fx-font-weight: bold; -fx-background-color: #3a1a1a; -fx-background-radius: 20; -fx-padding: 4 12 4 12;"/>
-                                        <Label fx:id="lblSessionId" text="Phiên #---"
-                                               style="-fx-text-fill: #444466; -fx-font-size: 12px;"/>
-                                    </children>
-                                </HBox>
-
-                                <!-- Tên vật phẩm được chọn -->
-                                <Label fx:id="lblItemName" text="Chọn một vật phẩm để xem"
-                                       wrapText="true"
-                                       style="-fx-text-fill: #ffffff; -fx-font-size: 20px; -fx-font-weight: bold;"/>
-
-                                <!-- Người bán -->
-                                <Label fx:id="lblSellerName" text="Người bán: ---"
-                                       style="-fx-text-fill: #9999bb; -fx-font-size: 13px;"/>
-
-                                <!-- Placeholder hình ảnh vật phẩm -->
-                                <StackPane prefHeight="170" prefWidth="356"
-                                           style="-fx-background-color: #12122a; -fx-background-radius: 12;">
-                                    <children>
-                                        <VBox alignment="CENTER" spacing="8">
+                                <!-- Phần chi tiết có thể cuộn -->
+                                <ScrollPane VBox.vgrow="ALWAYS" fitToWidth="true"
+                                            style="-fx-background: transparent; -fx-background-color: transparent; -fx-border-color: transparent;">
+                                    <content>
+                                        <VBox spacing="8" style="-fx-padding: 0 4 0 0;">
                                             <children>
-                                                <Label fx:id="lblItemEmoji" text="🏷"
-                                                       style="-fx-font-size: 64px;"/>
-                                                <Label fx:id="lblItemCategory" text="---"
-                                                       style="-fx-text-fill: #444466; -fx-font-size: 12px;"/>
+
+                                                <!-- Badge trạng thái -->
+                                                <HBox alignment="CENTER_LEFT" spacing="10">
+                                                    <children>
+                                                        <Label fx:id="lblStatusBadge" text="● ĐANG ĐẤU GIÁ"
+                                                               style="-fx-text-fill: #ff4444; -fx-font-size: 11px; -fx-font-weight: bold; -fx-background-color: #3a1a1a; -fx-background-radius: 20; -fx-padding: 3 10 3 10;"/>
+                                                        <Label fx:id="lblSessionId" text="Phiên #---"
+                                                               style="-fx-text-fill: #444466; -fx-font-size: 11px;"/>
+                                                    </children>
+                                                </HBox>
+
+                                                <!-- Tên vật phẩm -->
+                                                <Label fx:id="lblItemName" text="Chọn một vật phẩm để xem"
+                                                       wrapText="true"
+                                                       style="-fx-text-fill: #ffffff; -fx-font-size: 17px; -fx-font-weight: bold;"/>
+
+                                                <!-- Người bán -->
+                                                <Label fx:id="lblSellerName" text="Người bán: ---"
+                                                       style="-fx-text-fill: #9999bb; -fx-font-size: 12px;"/>
+
+                                                <!-- Placeholder hình ảnh thu gọn -->
+                                                <HBox alignment="CENTER_LEFT" spacing="12"
+                                                      style="-fx-background-color: #12122a; -fx-background-radius: 10; -fx-padding: 10 14 10 14;">
+                                                    <children>
+                                                        <Label fx:id="lblItemEmoji" text="🏷"
+                                                               style="-fx-font-size: 40px;"/>
+                                                        <VBox spacing="3">
+                                                            <children>
+                                                                <Label fx:id="lblItemCategory" text="---"
+                                                                       style="-fx-text-fill: #4ab0f0; -fx-font-size: 12px; -fx-font-weight: bold;"/>
+                                                                <Label fx:id="lblDescription" text="Chưa có thông tin chi tiết..."
+                                                                       wrapText="true"
+                                                                       style="-fx-text-fill: #777799; -fx-font-size: 11px;"/>
+                                                            </children>
+                                                        </VBox>
+                                                    </children>
+                                                </HBox>
+
+                                                <!-- Tags trạng thái -->
+                                                <HBox fx:id="hboxTags" spacing="8"/>
+
+                                                <!-- Giá hiện tại -->
+                                                <VBox spacing="3"
+                                                      style="-fx-background-color: #0d1f0d; -fx-background-radius: 10; -fx-padding: 10;">
+                                                    <children>
+                                                        <Label text="GIÁ CAO NHẤT HIỆN TẠI"
+                                                               style="-fx-text-fill: #4af0a0; -fx-font-size: 10px; -fx-font-weight: bold;"/>
+                                                        <Label fx:id="lblCurrentPrice" text="---"
+                                                               style="-fx-text-fill: #ffffff; -fx-font-size: 22px; -fx-font-weight: bold;"/>
+                                                        <Label fx:id="lblTopBidder" text="Chưa có ai đặt giá"
+                                                               style="-fx-text-fill: #4af0a0; -fx-font-size: 11px;"/>
+                                                    </children>
+                                                </VBox>
+
+                                                <!-- Đồng hồ đếm ngược -->
+                                                <VBox alignment="CENTER" spacing="2"
+                                                      style="-fx-background-color: #12122a; -fx-background-radius: 10; -fx-padding: 8;">
+                                                    <children>
+                                                        <Label text="KẾT THÚC TRONG"
+                                                               style="-fx-text-fill: #444466; -fx-font-size: 10px;"/>
+                                                        <Label fx:id="lblCountdown" text="-- : -- : --"
+                                                               style="-fx-text-fill: #f0c040; -fx-font-size: 24px; -fx-font-weight: bold; -fx-font-family: 'Monospaced';"/>
+                                                    </children>
+                                                </VBox>
+
                                             </children>
                                         </VBox>
-                                    </children>
-                                </StackPane>
+                                    </content>
+                                </ScrollPane>
 
-                                <!-- Mô tả -->
-                                <Label fx:id="lblDescription" text="Chưa có thông tin chi tiết..."
-                                       wrapText="true"
-                                       style="-fx-text-fill: #777799; -fx-font-size: 12px;"/>
-
-                                <!-- Tags trạng thái -->
-                                <HBox fx:id="hboxTags" spacing="8"/>
-
-                                <!-- Giá hiện tại -->
-                                <VBox spacing="4"
-                                      style="-fx-background-color: #0d1f0d; -fx-background-radius: 10; -fx-padding: 14;">
-                                    <children>
-                                        <Label text="GIÁ CAO NHẤT HIỆN TẠI"
-                                               style="-fx-text-fill: #4af0a0; -fx-font-size: 10px; -fx-font-weight: bold;"/>
-                                        <Label fx:id="lblCurrentPrice" text="---"
-                                               style="-fx-text-fill: #ffffff; -fx-font-size: 24px; -fx-font-weight: bold;"/>
-                                        <Label fx:id="lblTopBidder" text="Chưa có ai đặt giá"
-                                               style="-fx-text-fill: #4af0a0; -fx-font-size: 12px;"/>
-                                    </children>
-                                </VBox>
-
-                                <!-- Đồng hồ đếm ngược -->
-                                <VBox alignment="CENTER" spacing="3"
-                                      style="-fx-background-color: #12122a; -fx-background-radius: 10; -fx-padding: 12;">
-                                    <children>
-                                        <Label text="KẾT THÚC TRONG"
-                                               style="-fx-text-fill: #444466; -fx-font-size: 10px;"/>
-                                        <Label fx:id="lblCountdown" text="-- : -- : --"
-                                               style="-fx-text-fill: #f0c040; -fx-font-size: 28px; -fx-font-weight: bold; -fx-font-family: 'Monospaced';"/>
-                                    </children>
-                                </VBox>
-
-                                <!-- Nút THAM GIA ĐẤU GIÁ (to, nổi bật) -->
+                                <!-- ===== NÚT LUÔN HIỂN THỊ Ở DƯỚI ===== -->
                                 <Button fx:id="btnJoinAuction"
                                         text="⚡  THAM GIA ĐẤU GIÁ NGAY"
                                         onAction="#handleJoinAuction"
-                                        prefHeight="50"
+                                        prefHeight="46"
                                         prefWidth="999"
                                         disable="true"
-                                        style="-fx-background-color: #f0c040; -fx-text-fill: #0f0f1a; -fx-font-weight: bold; -fx-font-size: 15px; -fx-background-radius: 10; -fx-cursor: hand;"/>
+                                        style="-fx-background-color: #f0c040; -fx-text-fill: #0f0f1a; -fx-font-weight: bold; -fx-font-size: 14px; -fx-background-radius: 10; -fx-cursor: hand;"/>
 
-                                <!-- Nút theo dõi (yêu thích) -->
                                 <Button fx:id="btnWatchlist"
                                         text="🔖  Thêm vào danh sách theo dõi"
                                         onAction="#handleWatchlist"
-                                        prefHeight="38"
+                                        prefHeight="34"
                                         prefWidth="999"
                                         style="-fx-background-color: #1e1e3a; -fx-text-fill: #aaaacc; -fx-font-size: 12px; -fx-background-radius: 8; -fx-cursor: hand;"/>
 

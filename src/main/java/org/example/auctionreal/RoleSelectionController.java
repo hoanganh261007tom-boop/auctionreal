@@ -77,6 +77,13 @@ public class RoleSelectionController {
         Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
         stage.setScene(new Scene(root, width, height));
         stage.setTitle(title);
+        stage.setResizable(true);
+        stage.setMinWidth(width);
+        stage.setMinHeight(height);
+        // Mở rộng cửa sổ cho các màn hình dashboard
+        if (width >= 900) {
+            stage.setMaximized(true);
+        }
         stage.show();
     }
 

@@ -6,7 +6,7 @@
 <?import javafx.scene.image.*?>
 <?import javafx.geometry.*?>
 
-<AnchorPane prefHeight="700.0" prefWidth="900.0"
+<AnchorPane minHeight="700.0" minWidth="900.0"
             style="-fx-background-color: #0f0f1a;"
             xmlns="http://javafx.com/javafx/21"
             xmlns:fx="http://javafx.com/fxml/1"
@@ -29,11 +29,11 @@
 
 
         <!-- Nội dung chính -->
-        <HBox layoutX="20" layoutY="70" prefWidth="860" prefHeight="610" spacing="20">
+        <HBox AnchorPane.topAnchor="70" AnchorPane.leftAnchor="20" AnchorPane.rightAnchor="20" AnchorPane.bottomAnchor="10" spacing="20">
             <children>
 
                 <!-- Cột trái: Thông tin sản phẩm -->
-                <VBox prefWidth="430" prefHeight="600" spacing="15"
+                <VBox prefWidth="430" HBox.hgrow="ALWAYS" spacing="15"
                       style="-fx-background-color: #1a1a2e; -fx-background-radius: 16; -fx-padding: 25;">
                     <children>
 
@@ -54,13 +54,13 @@
                                style="-fx-text-fill: #9999bb; -fx-font-size: 14px;"/>
 
                         <!-- Hình ảnh placeholder đẹp -->
-                        <StackPane prefHeight="220" prefWidth="380"
+                        <StackPane prefHeight="150" prefWidth="380"
                                    style="-fx-background-color: #12122a; -fx-background-radius: 12;">
                             <children>
                                 <VBox alignment="CENTER" spacing="10">
                                     <children>
                                         <Label fx:id="lblItemEmoji" text="🕰"
-                                               style="-fx-font-size: 90px;"/>
+                                               style="-fx-font-size: 60px;"/>
                                         <Label fx:id="lblItemBrand" text="ROLEX  SUBMARINER"
                                                style="-fx-text-fill: #f0c040; -fx-font-size: 13px; -fx-font-weight: bold; -fx-letter-spacing: 3;"/>
                                     </children>
@@ -88,7 +88,7 @@
                 </VBox>
 
                 <!-- Cột phải: Đấu giá -->
-                <VBox prefWidth="410" prefHeight="600" spacing="14"
+                <VBox prefWidth="410" HBox.hgrow="ALWAYS" spacing="14"
                       style="-fx-background-color: #1a1a2e; -fx-background-radius: 16; -fx-padding: 25;">
                     <children>
 

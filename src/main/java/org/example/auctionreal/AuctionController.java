@@ -224,7 +224,10 @@ public class AuctionController {
         try {
             Parent root = FXMLLoader.load(getClass().getResource("role-selection.fxml"));
             Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
+            stage.setMaximized(false);
             stage.setScene(new Scene(root, 600, 400));
+            stage.setMinWidth(600);
+            stage.setMinHeight(400);
             stage.setTitle("Lựa chọn vai trò");
             stage.show();
         } catch (IOException e) {
