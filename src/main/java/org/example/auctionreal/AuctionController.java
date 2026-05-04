@@ -51,7 +51,7 @@ public class AuctionController {
     public static String  selectedDescription  = "\u0110\u1ed3ng h\u1ed3 l\u1eb7n bi\u1ec3u t\u01b0\u1ee3ng c\u1ee7a Rolex. T\u00ecnh tr\u1ea1ng: M\u1edbi 98%.";
     public static double  selectedStartPrice   = 285_000_000.0;
     public static double  selectedMinStep      = 1_000_000.0;
-    public static int     selectedDuration     = 2; // giờ
+    public static int     selectedDuration     = 2; // phút
 
     // --- Dữ liệu nghiệp vụ (lấy từ static fields được truyền vào) ---
     private double currentPrice;          // Giá khởi điểm ban đầu
@@ -71,7 +71,7 @@ public class AuctionController {
         // ---- Áp dụng dữ liệu vật phẩm được chọn từ BidderDashboard ----
         currentPrice = selectedStartPrice;
         MIN_STEP     = selectedMinStep;
-        totalSeconds = selectedDuration * 3600;
+        totalSeconds = selectedDuration * 60;
 
         if (lblItemName        != null) lblItemName.setText(selectedName);
         if (lblItemSubtitle    != null) lblItemSubtitle.setText(selectedSubtitle);

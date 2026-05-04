@@ -110,17 +110,17 @@ public class SellerDashboardController {
         }
 
         double startPrice, minStep;
-        int durationHours;
+        int durationMins;
         try {
             startPrice    = Double.parseDouble(priceStr);
             minStep       = Double.parseDouble(stepStr);
-            durationHours = Integer.parseInt(hoursStr);
+            durationMins  = Integer.parseInt(hoursStr);
         } catch (NumberFormatException e) {
             showMessage("❌ Giá khởi điểm, bước giá và thời gian phải là số!", false);
             return;
         }
 
-        if (startPrice <= 0 || minStep <= 0 || durationHours <= 0) {
+        if (startPrice <= 0 || minStep <= 0 || durationMins <= 0) {
             showMessage("❌ Giá và thời gian phải lớn hơn 0!", false);
             return;
         }
@@ -139,11 +139,11 @@ public class SellerDashboardController {
                 : "Ẩn danh";
 
         String entry = String.format(
-                "🏷 %s  |  Giá KĐ: %s ₫  |  %s  |  %dh  [%s]",
+                "🏷 %s  |  Giá KĐ: %s ₫  |  %s  |  %d phút  [%s]",
                 name,
                 currencyFormat.format((long) startPrice),
                 condition,
-                durationHours,
+                durationMins,
                 category
         );
         listMyItems.getItems().add(0, entry);
@@ -155,13 +155,16 @@ public class SellerDashboardController {
 
         showMessage("✅ Đã đăng vật phẩm \"" + name + "\" lên sàn đấu giá thành công!", true);
 
+        // --- Gán thời gian cho AuctionController (phút) ---
+        AuctionController.selectedDuration = durationMins;
+
         // --- Xoá form sau khi đăng thành công ---
         clearFormFields();
 
         System.out.println("Seller [" + seller + "] đã đăng vật phẩm: " + name
                 + " | Giá KĐ: " + startPrice
                 + " | Bước: " + minStep
-                + " | Thời gian: " + durationHours + "h"
+                + " | Thời gian: " + durationMins + " phút"
                 + " | Tình trạng: " + condition
                 + " | Danh mục: " + category);
     }
