@@ -16,11 +16,13 @@ import java.net.URL;
 
 public class RegisterController {
 
+    // ===== Dữ liệu người dùng (static để chia sẻ giữa các controller) =====
+    public static User currentUser;
+
+    // ===== Các phần tử UI =====
     @FXML private TextField txtId;
     @FXML private TextField txtUsername;
     @FXML private PasswordField txtPassword;
-
-    public static User currentUser;
 
     @FXML
     void handleRegister(ActionEvent event) {
