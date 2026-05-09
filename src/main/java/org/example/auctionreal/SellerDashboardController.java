@@ -20,6 +20,15 @@ import java.util.Locale;
  */
 public class SellerDashboardController {
 
+    // ===== Dữ liệu nội bộ =====
+    private final ToggleGroup conditionGroup = new ToggleGroup();
+    private int totalItems   = 0;
+    private int activeCount  = 0;
+    private int soldCount    = 0;
+
+    private final NumberFormat currencyFormat =
+            NumberFormat.getNumberInstance(new Locale("vi", "VN"));
+
     // ===== Các phần tử UI (phải khớp fx:id trong seller-dashboard.fxml) =====
 
     // Thanh trên
@@ -45,16 +54,38 @@ public class SellerDashboardController {
     @FXML private TextField txtSearch;
     @FXML private ListView<String> listMyItems;
 
-    // ===== Dữ liệu nội bộ =====
-    private final ToggleGroup conditionGroup = new ToggleGroup();
-    private int totalItems   = 0;
-    private int activeCount  = 0;
-    private int soldCount    = 0;
+    // ===== TIỆN ÍCH PRIVATE =====
+    // (khai báo trước initialize() để dễ hiểu khi đọc từ trên xuống)
 
-    private final NumberFormat currencyFormat =
-            NumberFormat.getNumberInstance(new Locale("vi", "VN"));
+    /** Xoá trắng toàn bộ các trường trong form nhập liệu. */
+    private void clearFormFields() {
+        txtItemName.clear();
+        txtDescription.clear();
+        txtStartPrice.clear();
+        txtMinStep.clear();
+        txtDurationHours.clear();
+        cmbCategory.setValue(null);
+        rbLikeNew.setSelected(true);
+    }
 
-    // ===== Khởi tạo =====
+    /** Làm mới các ô thống kê số lượng vật phẩm. */
+    private void refreshStats() {
+        lblItemCount.setText(totalItems + " vật phẩm");
+        lblTotalItems.setText(String.valueOf(totalItems));
+        lblActiveAuctions.setText(String.valueOf(activeCount));
+        lblSoldItems.setText(String.valueOf(soldCount));
+    }
+
+    /** Hiển thị thông báo kết quả thành công / thất bại trên giao diện. */
+    private void showMessage(String msg, boolean isSuccess) {
+        lblMessage.setText(msg);
+        lblMessage.setStyle(isSuccess
+                ? "-fx-text-fill: #4af0a0; -fx-font-size: 13px; -fx-font-weight: bold;"
+                : "-fx-text-fill: #ff7777; -fx-font-size: 13px; -fx-font-weight: bold;"
+        );
+    }
+
+    // ===== KHỞI TẠO =====
 
     @FXML
     public void initialize() {
@@ -169,23 +200,18 @@ public class SellerDashboardController {
                 + " | Danh mục: " + category);
     }
 
-    /**
-     * handleClearForm: Xoá trắng toàn bộ form nhập liệu.
-     */
+    /** handleClearForm: Xoá trắng toàn bộ form nhập liệu. */
     @FXML
     void handleClearForm(ActionEvent event) {
         clearFormFields();
         lblMessage.setText("");
     }
 
-    /**
-     * handleFilter: Lọc danh sách vật phẩm theo từ khoá tìm kiếm.
-     */
+    /** handleFilter: Lọc danh sách vật phẩm theo từ khoá tìm kiếm. */
     @FXML
     void handleFilter(ActionEvent event) {
         String keyword = txtSearch.getText().trim().toLowerCase();
         // TODO: Kết nối database để lọc thật sự
-        // Hiện tại chỉ hiển thị thông báo demo
         if (keyword.isEmpty()) {
             showMessage("💡 Nhập từ khoá để lọc danh sách.", false);
         } else {
@@ -193,9 +219,7 @@ public class SellerDashboardController {
         }
     }
 
-    /**
-     * handleViewItem: Xem chi tiết vật phẩm được chọn trong ListView.
-     */
+    /** handleViewItem: Xem chi tiết vật phẩm được chọn trong ListView. */
     @FXML
     void handleViewItem(ActionEvent event) {
         String selected = listMyItems.getSelectionModel().getSelectedItem();
@@ -207,9 +231,7 @@ public class SellerDashboardController {
         // TODO: Mở cửa sổ chi tiết vật phẩm
     }
 
-    /**
-     * handleWithdrawItem: Rút vật phẩm khỏi sàn đấu giá.
-     */
+    /** handleWithdrawItem: Rút vật phẩm khỏi sàn đấu giá. */
     @FXML
     void handleWithdrawItem(ActionEvent event) {
         int selectedIndex = listMyItems.getSelectionModel().getSelectedIndex();
@@ -234,9 +256,7 @@ public class SellerDashboardController {
         });
     }
 
-    /**
-     * handleBack: Quay về màn hình chọn vai trò.
-     */
+    /** handleBack: Quay về màn hình chọn vai trò. */
     @FXML
     void handleBack(ActionEvent event) throws IOException {
         Parent root = FXMLLoader.load(getClass().getResource("role-selection.fxml"));
@@ -247,32 +267,5 @@ public class SellerDashboardController {
         stage.setMinHeight(400);
         stage.setTitle("Lựa chọn vai trò");
         stage.show();
-    }
-
-    // ===== TIỆN ÍCH PRIVATE =====
-
-    private void clearFormFields() {
-        txtItemName.clear();
-        txtDescription.clear();
-        txtStartPrice.clear();
-        txtMinStep.clear();
-        txtDurationHours.clear();
-        cmbCategory.setValue(null);
-        rbLikeNew.setSelected(true);
-    }
-
-    private void refreshStats() {
-        lblItemCount.setText(totalItems + " vật phẩm");
-        lblTotalItems.setText(String.valueOf(totalItems));
-        lblActiveAuctions.setText(String.valueOf(activeCount));
-        lblSoldItems.setText(String.valueOf(soldCount));
-    }
-
-    private void showMessage(String msg, boolean isSuccess) {
-        lblMessage.setText(msg);
-        lblMessage.setStyle(isSuccess
-                ? "-fx-text-fill: #4af0a0; -fx-font-size: 13px; -fx-font-weight: bold;"
-                : "-fx-text-fill: #ff7777; -fx-font-size: 13px; -fx-font-weight: bold;"
-        );
     }
 }
