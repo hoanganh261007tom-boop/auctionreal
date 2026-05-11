@@ -16,28 +16,19 @@ import java.net.URL;
 
 public class RegisterController {
 
-    // ===== Dữ liệu người dùng (static để chia sẻ giữa các controller) =====
-    public static User currentUser;
-
-    // ===== Các phần tử UI =====
     @FXML private TextField txtId;
     @FXML private TextField txtUsername;
     @FXML private PasswordField txtPassword;
 
     @FXML
     void handleRegister(ActionEvent event) {
-        String id = txtId.getText();
-        String name = txtUsername.getText();
         String password = txtPassword.getText();
 
         if (id.isEmpty() || name.isEmpty() || password.length() < 4) {
-            System.out.println("Vui lòng kiểm tra lại thông tin nhập vào!");
             return;
         }
 
-        // Tạo đối tượng tạm thời (chưa lưu DB, sẽ quay lại phần này sau)
         currentUser = new Bidder(id, name, password, 0.0);
-        System.out.println("Đăng ký thành công: " + currentUser);
 
         try {
             switchToRoleSelection(event);

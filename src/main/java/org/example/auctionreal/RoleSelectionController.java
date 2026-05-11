@@ -22,36 +22,6 @@ public class RoleSelectionController {
     @FXML
     private Label lblWelcome;
 
-    // ===== TIỆN ÍCH PRIVATE =====
-    // (khai báo trước các handler để dễ hiểu khi đọc từ trên xuống)
-
-    /**
-     * switchToScreen: Hàm tiện ích chuyển sang bất kỳ màn hình FXML nào.
-     * Được dùng bởi handleSelectSeller() và handleSelectBidder().
-     */
-    private void switchToScreen(ActionEvent event, String fxmlFile, String title,
-                                double width, double height) throws IOException {
-        java.net.URL fxmlUrl = getClass().getResource(fxmlFile);
-        if (fxmlUrl == null) {
-            System.err.println("Lỗi: Không tìm thấy " + fxmlFile + "!");
-            return;
-        }
-        Parent root = FXMLLoader.load(fxmlUrl);
-        Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
-        stage.setScene(new Scene(root, width, height));
-        stage.setTitle(title);
-        stage.setResizable(true);
-        stage.setMinWidth(width);
-        stage.setMinHeight(height);
-        // Mở rộng cửa sổ cho các màn hình dashboard
-        if (width >= 900) {
-            stage.setMaximized(true);
-        }
-        stage.show();
-    }
-
-    // ===== KHỞI TẠO =====
-
     /**
      * initialize(): Chạy tự động khi giao diện được nạp.
      */
@@ -62,8 +32,6 @@ public class RoleSelectionController {
             lblWelcome.setText("Chào " + RegisterController.currentUser.getUsername() + "! Hãy chọn vai trò của bạn:");
         }
     }
-
-    // ===== XỬ LÝ SỰ KIỆN =====
 
     @FXML
     void handleSelectSeller(ActionEvent event) {
