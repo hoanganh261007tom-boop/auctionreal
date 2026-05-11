@@ -7,7 +7,9 @@ import java.sql.SQLException;
 
 public class UserDAO {
 
-    // 1. Hàm dùng để Đăng ký người dùng mới
+    // ─────────────────────────────────────────────────────────────────────────
+    // 1. Đăng ký người dùng mới
+    // ─────────────────────────────────────────────────────────────────────────
     public boolean registerUser(String username, String password, String role) {
         String sql = "INSERT INTO users (username, password, role) VALUES (?, ?, ?)";
 
@@ -15,21 +17,30 @@ public class UserDAO {
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             pstmt.setString(1, username);
-            pstmt.setString(2, password);
+            pstmt.setString(2, password);  // TODO: nên hash password (BCrypt) trong production
             pstmt.setString(3, role);
 
             int rowsAffected = pstmt.executeUpdate();
             return rowsAffected > 0;
 
         } catch (SQLException e) {
-            e.printStackTrace();
+            System.err.println("[UserDAO] registerUser thất bại: " + e.getMessage());
             return false;
         }
     }
 
-    // 2. Hàm dùng để Đăng nhập (Kiểm tra tài khoản có khớp không)
+    // ─────────────────────────────────────────────────────────────────────────
+    // 2. Đăng nhập – kiểm tra username + password (trả về true/false)
+    // ─────────────────────────────────────────────────────────────────────────
     public boolean loginUser(String username, String password) {
-        String sql = "SELECT * FROM users WHERE username = ? AND password = ?";
+        return getRoleByLogin(username, password) != null;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // 3. Đăng nhập – trả về ROLE ("BIDDER" / "SELLER") hoặc null nếu sai
+    // ─────────────────────────────────────────────────────────────────────────
+    public String getRoleByLogin(String username, String password) {
+        String sql = "SELECT role FROM users WHERE username = ? AND password = ?";
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -38,11 +49,12 @@ public class UserDAO {
             pstmt.setString(2, password);
 
             ResultSet rs = pstmt.executeQuery();
-            return rs.next(); // Nếu có dữ liệu trả về nghĩa là đúng tài khoản/mật khẩu
-
+            if (rs.next()) {
+                return rs.getString("role"); // "BIDDER" hoặc "SELLER"
+            }
         } catch (SQLException e) {
-            e.printStackTrace();
-            return false;
+            System.err.println("[UserDAO] getRoleByLogin thất bại: " + e.getMessage());
         }
+        return null; // Sai tài khoản / mật khẩu
     }
 }

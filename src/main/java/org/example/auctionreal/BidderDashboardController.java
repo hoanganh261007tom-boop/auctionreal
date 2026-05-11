@@ -131,8 +131,8 @@ public class BidderDashboardController {
         cmbSort.getItems().addAll("Mới nhất", "Giá thấp → cao", "Giá cao → thấp", "Kết thúc sớm nhất");
         cmbSort.setValue("Mới nhất");
 
-        // Load dữ liệu demo
-        loadDemoItems();
+        // Load dữ liệu từ Database (fallback sang demo nếu DB trống)
+        loadItemsFromDatabase();
         refreshItemList();
         refreshStats();
     }
@@ -276,8 +276,41 @@ public class BidderDashboardController {
 
     // ===== TIỆN ÍCH PRIVATE =====
 
+    // ===== NẠP DỮ LIỆU =====
+
     /**
-     * Load dữ liệu demo. Sẽ thay bằng truy vấn database thực tế.
+     * Load vật phẩm từ Database.
+     * Nếu DB trống hoặc không kết nối được, tự động dùng dữ liệu demo.
+     */
+    private void loadItemsFromDatabase() {
+        demoItems.clear();
+        ItemDAO itemDAO = new ItemDAO();
+        List<String> dbItems = itemDAO.getAllItemsFormatted();
+
+        if (!dbItems.isEmpty()) {
+            // Dữ liệu từ DB: chuyển sang AuctionItemDemo đơn giản
+            for (String line : dbItems) {
+                // Format: "🏷 name | price ₫ | seller | status"
+                String[] parts = line.split("  \\|  ");
+                String name   = parts.length > 0 ? parts[0].replace("🏷 ", "").trim() : "?";
+                String seller = parts.length > 2 ? parts[2].replace("👤 ", "").trim() : "Hệ thống";
+                demoItems.add(new AuctionItemDemo(
+                        name, seller,
+                        "(Mô tả từ database)",
+                        0, "Khác", "🏷", "--", "--:--:--"));
+            }
+            // Đồng thời cập nhật ListView trực tiếp với chuỗi đầy đủ từ DB
+            listAuctionItems.getItems().clear();
+            listAuctionItems.getItems().addAll(dbItems);
+        } else {
+            // Fallback: dùng demo nếu DB chưa có dữ liệu
+            System.out.println("[BidderDashboard] DB trống hoặc chưa kết nối, dùng demo data.");
+            loadDemoItems();
+        }
+    }
+
+    /**
+     * Load dữ liệu demo. Dùng khi DB chưa sẵn sàng.
      */
     private void loadDemoItems() {
         demoItems.add(new AuctionItemDemo("Rolex Submariner Date 2023", "Nguyen Hoang Anh",
