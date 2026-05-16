@@ -172,6 +172,18 @@
                                                 style="-fx-background-color: #f0c040; -fx-text-fill: #0f0f1a; -fx-font-weight: bold; -fx-font-size: 14px; -fx-background-radius: 8; -fx-cursor: hand;"/>
                                     </children>
                                 </HBox>
+                            <VBox spacing="8">
+                                <Label text="🤖 Auto Bidding"
+                                       style="-fx-text-fill: white; -fx-font-size: 14px; -fx-font-weight: bold;" />
+
+                                <TextField fx:id="txtAutoBidMax"
+                                           promptText="Nhập giá tối đa tự động"
+                                           prefHeight="40" />
+
+                                <Button text="Bật Auto Bid"
+                                        onAction="#handleEnableAutoBid"
+                                        style="-fx-background-color: #4af0a0; -fx-text-fill: black; -fx-font-weight: bold; -fx-background-radius: 8;" />
+                            </VBox>
 
                                 <!-- Nút gợi ý nhanh -->
                                 <HBox spacing="8">
