@@ -16,12 +16,16 @@ import java.net.URL;
 
 public class RegisterController {
 
+    public static User currentUser;
+
     @FXML private TextField txtId;
     @FXML private TextField txtUsername;
     @FXML private PasswordField txtPassword;
 
     @FXML
     void handleRegister(ActionEvent event) {
+        String id = txtId.getText();
+        String name = txtUsername.getText();
         String password = txtPassword.getText();
 
         if (id.isEmpty() || name.isEmpty() || password.length() < 4) {
