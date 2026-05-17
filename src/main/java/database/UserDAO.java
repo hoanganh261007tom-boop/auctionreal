@@ -10,23 +10,28 @@ public class UserDAO {
     // ─────────────────────────────────────────────────────────────────────────
     // 1. Đăng ký người dùng mới
     // ─────────────────────────────────────────────────────────────────────────
-    public boolean registerUser(String username, String password, String role) {
+    public int registerUser(String username, String password, String role) {
         String sql = "INSERT INTO users (username, password, role) VALUES (?, ?, ?)";
 
         try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+             PreparedStatement pstmt = conn.prepareStatement(sql, java.sql.Statement.RETURN_GENERATED_KEYS)) {
 
             pstmt.setString(1, username);
             pstmt.setString(2, password);  // TODO: nên hash password (BCrypt) trong production
             pstmt.setString(3, role);
 
             int rowsAffected = pstmt.executeUpdate();
-            return rowsAffected > 0;
+            if (rowsAffected > 0) {
+                ResultSet rs = pstmt.getGeneratedKeys();
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
 
         } catch (SQLException e) {
             System.err.println("[UserDAO] registerUser thất bại: " + e.getMessage());
-            return false;
         }
+        return -1;
     }
 
     // ─────────────────────────────────────────────────────────────────────────

@@ -41,7 +41,7 @@ public class RoleSelectionController {
         System.out.println("Hệ thống: Bạn đã chọn vai trò SELLER");
         // Chuyển sang Seller Dashboard
         try {
-            switchToScreen(event, "seller-dashboard.fxml", "🏪 Seller Dashboard", 1000, 700);
+            switchToScreen(event, "seller-dashboard.fxml", "🏪 Seller Dashboard", 1200, 800);
         } catch (IOException e) {
             System.err.println("Lỗi không chuyển được trang: " + e.getMessage());
             e.printStackTrace();
@@ -56,11 +56,35 @@ public class RoleSelectionController {
         System.out.println("Hệ thống: Bạn đã chọn vai trò BIDDER");
         // Chuyển sang Bidder Dashboard
         try {
-            switchToScreen(event, "bidder-dashboard.fxml", "🔍 Bidder Dashboard", 1000, 700);
+            switchToScreen(event, "bidder-dashboard.fxml", "🔍 Bidder Dashboard", 1200, 800);
         } catch (IOException e) {
             System.err.println("Lỗi không chuyển được trang: " + e.getMessage());
             e.printStackTrace();
         }
+    }
+
+    /**
+     * switchToScreen: Hàm tiện ích chuyển sang bất kỳ màn hình FXML nào.
+     */
+    private void switchToScreen(ActionEvent event, String fxmlFile, String title,
+                                double width, double height) throws IOException {
+        java.net.URL fxmlUrl = getClass().getResource(fxmlFile);
+        if (fxmlUrl == null) {
+            System.err.println("Lỗi: Không tìm thấy " + fxmlFile + "!");
+            return;
+        }
+        Parent root = FXMLLoader.load(fxmlUrl);
+        Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
+        stage.setScene(new Scene(root, width, height));
+        stage.setTitle(title);
+        stage.setResizable(true);
+        stage.setMinWidth(width);
+        stage.setMinHeight(height);
+        // Mở rộng cửa sổ cho các màn hình dashboard
+        if (width >= 900) {
+            stage.setMaximized(true);
+        }
+        stage.show();
     }
 
     @FXML

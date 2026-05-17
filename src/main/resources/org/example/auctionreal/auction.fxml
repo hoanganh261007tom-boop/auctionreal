@@ -6,7 +6,7 @@
 <?import javafx.scene.image.*?>
 <?import javafx.geometry.*?>
 
-<AnchorPane minHeight="700.0" minWidth="900.0"
+<AnchorPane minHeight="800.0" minWidth="1200.0"
             style="-fx-background-color: #0f0f1a;"
             xmlns="http://javafx.com/javafx/21"
             xmlns:fx="http://javafx.com/fxml/1"
@@ -33,7 +33,7 @@
             <children>
 
                 <!-- Cột trái: Thông tin sản phẩm -->
-                <VBox prefWidth="430" HBox.hgrow="ALWAYS" spacing="15"
+                <VBox prefWidth="550" HBox.hgrow="ALWAYS" spacing="15"
                       style="-fx-background-color: #1a1a2e; -fx-background-radius: 16; -fx-padding: 25;">
                     <children>
 
@@ -88,7 +88,7 @@
                 </VBox>
 
                 <!-- Cột phải: Đấu giá -->
-                <VBox prefWidth="410" HBox.hgrow="ALWAYS" spacing="14"
+                <VBox prefWidth="550" HBox.hgrow="ALWAYS" spacing="14"
                       style="-fx-background-color: #1a1a2e; -fx-background-radius: 16; -fx-padding: 25;">
                     <children>
 
