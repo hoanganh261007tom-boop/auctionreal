@@ -76,6 +76,9 @@
                             <noManPages>true</noManPages>
                             <stripDebug>true</stripDebug>
                             <noHeaderFiles>true</noHeaderFiles>
+                            <jvmArgs>
+                                <jvmArg>-Dprism.order=sw</jvmArg>
+                            </jvmArgs>
                         </configuration>
                     </execution>
                 </executions>

@@ -45,8 +45,13 @@ public class SellerDashboardController {
     @FXML private TextField txtSearch;
     @FXML private ListView<String> listMyItems;
 
-
-
+    // ===== Biến nội bộ =====
+    private final javafx.scene.control.ToggleGroup conditionGroup = new javafx.scene.control.ToggleGroup();
+    private final java.text.NumberFormat currencyFormat =
+            java.text.NumberFormat.getNumberInstance(new java.util.Locale("vi", "VN"));
+    private int totalItems  = 0;
+    private int activeCount = 0;
+    private int soldCount   = 0;
 
     @FXML
     public void initialize() {
@@ -223,5 +228,33 @@ public class SellerDashboardController {
         stage.setMinHeight(400);
         stage.setTitle("Lựa chọn vai trò");
         stage.show();
+    }
+
+    // ===== TIỆN ÍCH PRIVATE =====
+
+    private void refreshStats() {
+        if (lblTotalItems     != null) lblTotalItems.setText(String.valueOf(totalItems));
+        if (lblActiveAuctions != null) lblActiveAuctions.setText(String.valueOf(activeCount));
+        if (lblSoldItems      != null) lblSoldItems.setText(String.valueOf(soldCount));
+        if (lblItemCount      != null) lblItemCount.setText("Tổng: " + totalItems + " vật phẩm");
+    }
+
+    private void showMessage(String msg, boolean isSuccess) {
+        if (lblMessage != null) {
+            lblMessage.setText(msg);
+            lblMessage.setStyle(isSuccess
+                    ? "-fx-text-fill: #4af0a0; -fx-font-size: 13px;"
+                    : "-fx-text-fill: #ff7777; -fx-font-size: 13px;");
+        }
+    }
+
+    private void clearFormFields() {
+        if (txtItemName    != null) txtItemName.clear();
+        if (txtDescription != null) txtDescription.clear();
+        if (txtStartPrice  != null) txtStartPrice.clear();
+        if (txtMinStep     != null) txtMinStep.clear();
+        if (txtDurationHours != null) txtDurationHours.clear();
+        if (cmbCategory    != null) cmbCategory.setValue(null);
+        if (rbLikeNew      != null) rbLikeNew.setSelected(true);
     }
 }
