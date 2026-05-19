@@ -15,19 +15,60 @@ import user.User;
 import java.io.IOException;
 
 /**
- * RoleSelectionController: Xử lý logic khi người dùng chọn làm Người bán hoặc Người mua.
+ * RoleSelectionController: Xử lý logic khi người dùng chọn làm Người bán hoặc
+ * Người mua.
  */
 public class RoleSelectionController {
+
+    /** ✏️ Điều chỉnh số tiền ban đầu của Bidder tại đây */
+    private static final double INITIAL_BALANCE = 50_000_000.0;
 
     @FXML
     private Label lblWelcome;
 
-    // ===== TIỆN ÍCH PRIVATE =====
-    // (khai báo trước các handler để dễ hiểu khi đọc từ trên xuống)
+    /**
+     * initialize(): Chạy tự động khi giao diện được nạp.
+     */
+    @FXML
+    public void initialize() {
+        // Lấy thông tin người dùng từ màn hình đăng ký
+        if (RegisterController.currentUser != null) {
+            lblWelcome.setText("Chào " + RegisterController.currentUser.getUsername() + "! Hãy chọn vai trò của bạn:");
+        }
+    }
+
+    @FXML
+    void handleSelectSeller(ActionEvent event) {
+        User temp = RegisterController.currentUser;
+        // Chuyển đổi sang đối tượng Seller (giữ ID, Name từ Register)
+        RegisterController.currentUser = new Seller(temp.getId(), temp.getUsername(), "n/a", "Seller");
+        System.out.println("Hệ thống: Bạn đã chọn vai trò SELLER");
+        // Chuyển sang Seller Dashboard
+        try {
+            switchToScreen(event, "seller-dashboard.fxml", "🏪 Seller Dashboard", 1200, 800);
+        } catch (IOException e) {
+            System.err.println("Lỗi không chuyển được trang: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    @FXML
+    void handleSelectBidder(ActionEvent event) {
+        User temp = RegisterController.currentUser;
+        // Chuyển đổi sang đối tượng Bidder với số dư ban đầu từ INITIAL_BALANCE
+        RegisterController.currentUser = new Bidder(temp.getId(), temp.getUsername(), "n/a", INITIAL_BALANCE);
+        System.out.println("Hệ thống: Bạn đã chọn vai trò BIDDER");
+        // Chuyển sang Bidder Dashboard
+        try {
+            switchToScreen(event, "bidder-dashboard.fxml", "🔍 Bidder Dashboard", 1200, 800);
+        } catch (IOException e) {
+            System.err.println("Lỗi không chuyển được trang: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
 
     /**
      * switchToScreen: Hàm tiện ích chuyển sang bất kỳ màn hình FXML nào.
-     * Được dùng bởi handleSelectSeller() và handleSelectBidder().
      */
     private void switchToScreen(ActionEvent event, String fxmlFile, String title,
                                 double width, double height) throws IOException {
@@ -50,51 +91,6 @@ public class RoleSelectionController {
         stage.show();
     }
 
-    // ===== KHỞI TẠO =====
-
-    /**
-     * initialize(): Chạy tự động khi giao diện được nạp.
-     */
-    @FXML
-    public void initialize() {
-        // Lấy thông tin người dùng từ màn hình đăng ký
-        if (RegisterController.currentUser != null) {
-            lblWelcome.setText("Chào " + RegisterController.currentUser.getUsername() + "! Hãy chọn vai trò của bạn:");
-        }
-    }
-
-    // ===== XỬ LÝ SỰ KIỆN =====
-
-    @FXML
-    void handleSelectSeller(ActionEvent event) {
-        User temp = RegisterController.currentUser;
-        // Chuyển đổi sang đối tượng Seller (giữ ID, Name từ Register)
-        RegisterController.currentUser = new Seller(temp.getId(), temp.getUsername(), "n/a", "Seller");
-        System.out.println("Hệ thống: Bạn đã chọn vai trò SELLER");
-        // Chuyển sang Seller Dashboard
-        try {
-            switchToScreen(event, "seller-dashboard.fxml", "🏪 Seller Dashboard", 1000, 700);
-        } catch (IOException e) {
-            System.err.println("Lỗi không chuyển được trang: " + e.getMessage());
-            e.printStackTrace();
-        }
-    }
-
-    @FXML
-    void handleSelectBidder(ActionEvent event) {
-        User temp = RegisterController.currentUser;
-        // Chuyển đổi sang đối tượng Bidder với số dư mặc định 50.000.000 ₫
-        RegisterController.currentUser = new Bidder(temp.getId(), temp.getUsername(), "n/a", 50_000_000.0);
-        System.out.println("Hệ thống: Bạn đã chọn vai trò BIDDER");
-        // Chuyển sang Bidder Dashboard
-        try {
-            switchToScreen(event, "bidder-dashboard.fxml", "🔍 Bidder Dashboard", 1000, 700);
-        } catch (IOException e) {
-            System.err.println("Lỗi không chuyển được trang: " + e.getMessage());
-            e.printStackTrace();
-        }
-    }
-
     @FXML
     void handleBack(ActionEvent event) throws IOException {
         // Quay lại trang đăng ký
@@ -102,6 +98,17 @@ public class RoleSelectionController {
         Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
         stage.setScene(new Scene(root));
         stage.setTitle("Đăng ký tài khoản");
+        stage.show();
+    }
+
+    private void switchToScreen(ActionEvent event, String fxmlFile, String title,
+            double width, double height) throws IOException {
+        FXMLLoader loader = new FXMLLoader(
+                getClass().getResource("/org/example/auctionreal/" + fxmlFile));
+        Parent root = loader.load();
+        Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
+        stage.setScene(new Scene(root, width, height));
+        stage.setTitle(title);
         stage.show();
     }
 }

@@ -9,7 +9,7 @@
   seller-dashboard.fxml
   Màn hình dành cho Người Bán (Seller).
 -->
-<AnchorPane minHeight="700.0" minWidth="1000.0"
+<AnchorPane minHeight="800.0" minWidth="1200.0"
             style="-fx-background-color: #0f0f1a;"
             xmlns="http://javafx.com/javafx/21"
             xmlns:fx="http://javafx.com/fxml/1"
@@ -40,11 +40,8 @@
                 <!-- ==========================================
                      CỘT TRÁI: FORM ĐĂNG VẬT PHẨM
                      ========================================== -->
-                <ScrollPane HBox.hgrow="ALWAYS" prefWidth="500" minWidth="450"
-                             fitToWidth="true" hbarPolicy="NEVER" vbarPolicy="AS_NEEDED"
-                             style="-fx-background-color: #1a1a2e; -fx-background: #1a1a2e; -fx-border-color: transparent; -fx-background-radius: 16;">
-                <VBox prefWidth="480" spacing="14"
-                      style="-fx-background-color: #1a1a2e; -fx-background-radius: 16; -fx-padding: 28;">
+                <VBox prefWidth="550" HBox.hgrow="ALWAYS" spacing="12"
+                      style="-fx-background-color: #1a1a2e; -fx-background-radius: 16; -fx-padding: 24;">
                     <children>
 
                         <!-- Tiêu đề form -->
@@ -121,7 +118,7 @@
                         <HBox spacing="12">
                             <children>
                                 <!-- Thời gian: chiếm 2/3 -->
-                                <VBox spacing="5" prefWidth="256">
+                                <VBox spacing="5" HBox.hgrow="ALWAYS">
                                     <children>
                                         <Label text="⏱ Thời gian đấu giá *"
                                                style="-fx-text-fill: #ccccee; -fx-font-size: 13px; -fx-font-weight: bold;"/>
@@ -135,7 +132,7 @@
                                     </children>
                                 </VBox>
                                 <!-- Danh mục: chiếm 1/3 -->
-                                <VBox spacing="5" prefWidth="116">
+                                <VBox spacing="5" HBox.hgrow="ALWAYS">
                                     <children>
                                         <Label text="🗂 Danh mục"
                                                style="-fx-text-fill: #ccccee; -fx-font-size: 13px; -fx-font-weight: bold;"/>
@@ -159,11 +156,11 @@
                                 <HBox spacing="8" alignment="CENTER_LEFT"
                                       style="-fx-background-color: #12122a; -fx-background-radius: 8; -fx-padding: 10 14 10 14;">
                                     <children>
-                                        <RadioButton fx:id="rbNew" text="✨ Mới 100%"
+                                        <RadioButton fx:id="rbNew" text="✨ Mới 100%" minWidth="-Infinity"
                                                      style="-fx-text-fill: #ccccee; -fx-font-size: 13px;"/>
-                                        <RadioButton fx:id="rbLikeNew" text="👍 Như mới (98%+)"
+                                        <RadioButton fx:id="rbLikeNew" text="👍 Như mới (98%+)" minWidth="-Infinity"
                                                      style="-fx-text-fill: #ccccee; -fx-font-size: 13px;"/>
-                                        <RadioButton fx:id="rbUsed" text="📦 Đã qua sử dụng"
+                                        <RadioButton fx:id="rbUsed" text="📦 Đã qua sử dụng" minWidth="-Infinity"
                                                      style="-fx-text-fill: #ccccee; -fx-font-size: 13px;"/>
                                     </children>
                                 </HBox>
@@ -191,7 +188,6 @@
 
                     </children>
                 </VBox>
-                </ScrollPane>
 
                 <!-- ============================================
                      CỘT PHẢI: DANH SÁCH VẬT PHẨM ĐÃ ĐĂNG
