@@ -22,22 +22,26 @@ import java.util.Locale;
 public class AuctionController {
 
     // ===== Dữ liệu tĩnh truyền từ BidderDashboard =====
-    public static String selectedName        = "Vật phẩm đấu giá";
-    public static String selectedSubtitle    = "";
-    public static String selectedEmoji       = "🏷";
-    public static String selectedBrand       = "";
-    public static String selectedDescription = "";
-    public static double selectedStartPrice  = 1_000_000.0;
-    public static double selectedMinStep     = 100_000.0;
-    public static int    selectedDuration    = 2; // phút
+    public static String  selectedName        = "Rolex Submariner Date";
+    public static String  selectedSubtitle    = "Ref. 126610LN \u2022 Stainless Steel \u2022 2023";
+    public static String  selectedEmoji       = "\uD83D\uDD70";
+    public static String  selectedBrand       = "ROLEX  SUBMARINER";
+    public static String  selectedDescription  = "Đồng hồ lặn biểu tượng của Rolex. Tình trạng: Mới 98%.";
+    public static double  selectedStartPrice   = 285_000_000.0;
+    public static double  selectedMinStep      = 1_000_000.0;
+    public static int     selectedDuration     = 2; // phút
 
-    // ===== Hằng số runtime =====
-    private double  MIN_STEP;
-    private double  currentPrice;
-    private String  topBidder = "—";
-    private int     bidCount  = 0;
-    private int     totalSeconds;
+    // ===== Biến trạng thái runtime =====
+    private double MIN_STEP;
+    private double currentPrice;
+    private String topBidder = "Chưa có ai";
+    private int    bidCount  = 0;
+    private int    totalSeconds;
     private Timeline countdownTimer;
+
+    // ===== AUTO BID =====
+    private boolean autoBidEnabled = false;
+    private double autoBidMaxAmount = 0;
 
     private final NumberFormat currencyFormat =
             NumberFormat.getNumberInstance(new Locale("vi", "VN"));
@@ -50,6 +54,7 @@ public class AuctionController {
     @FXML private Label lblMessage;
     @FXML private Label lblUserInfo;
     @FXML private TextField txtBidAmount;
+    @FXML private TextField txtAutoBidMax;
     @FXML private ListView<String> listBidHistory;
 
     @FXML private Label lblItemName;
@@ -61,15 +66,12 @@ public class AuctionController {
     @FXML private Label lblMinStep;
 
     // ===== Khởi tạo =====
-
     @FXML
     public void initialize() {
-        // Nhận dữ liệu vật phẩm
         MIN_STEP     = selectedMinStep;
         currentPrice = selectedStartPrice;
         totalSeconds = selectedDuration * 60; // phút → giây
 
-        // Hiển thị thông tin vật phẩm
         if (lblItemName        != null) lblItemName.setText(selectedName);
         if (lblItemSubtitle    != null) lblItemSubtitle.setText(selectedSubtitle);
         if (lblItemEmoji       != null) lblItemEmoji.setText(selectedEmoji);
@@ -78,12 +80,11 @@ public class AuctionController {
         if (lblStartPrice      != null) lblStartPrice.setText(formatMoney(selectedStartPrice) + " ₫");
         if (lblMinStep         != null) lblMinStep.setText("+" + formatMoney(MIN_STEP) + " ₫");
 
-        // Hiển thị người dùng + số dư
         User user = RegisterController.currentUser;
         if (lblUserInfo != null) {
             if (user instanceof user.Bidder bidder) {
                 lblUserInfo.setText(
-                    "👤 " + user.getUsername() + "  |  💰 " + formatMoney(bidder.getBalance()) + " ₫");
+                        "👤 " + user.getUsername() + "  |  💰 " + formatMoney(bidder.getBalance()) + " ₫");
             } else {
                 lblUserInfo.setText(user != null ? "👤 " + user.getUsername() : "👤 Khách");
             }
@@ -92,9 +93,16 @@ public class AuctionController {
         refreshUI();
         startCountdown();
     }
+    private void showMessage(String msg, boolean isSuccess) {
+        lblMessage.setText(msg);
+        if (isSuccess) {
+            lblMessage.setStyle("-fx-text-fill: #4af0a0; -fx-font-size: 13px; -fx-font-weight: bold;");
+        } else {
+            lblMessage.setStyle("-fx-text-fill: #ff7777; -fx-font-size: 13px; -fx-font-weight: bold;");
+        }
+    }
 
     // ===== Xử lý sự kiện =====
-
     @FXML
     void handleBid(ActionEvent event) {
         String raw = txtBidAmount.getText().trim().replaceAll("[.,\\s]", "");
@@ -110,29 +118,16 @@ public class AuctionController {
         }
     }
 
-    @FXML
-    void handleQuickBid1(ActionEvent event) {
-        quickBid(1_000_000);
-    }
-
-    @FXML
-    void handleQuickBid5(ActionEvent event) {
-        quickBid(5_000_000);
-    }
-
-    @FXML
-    void handleQuickBid10(ActionEvent event) {
-        quickBid(10_000_000);
-    }
-
-    @FXML
-    void handleQuickBid50(ActionEvent event) {
-        quickBid(50_000_000);
-    }
+    // Đặt giá nhanh lấy giá hiện tại cộng thêm số tiền tương ứng
+    @FXML void handleQuickBid1(ActionEvent e)  { placeBid(currentPrice + 1_000_000); }
+    @FXML void handleQuickBid5(ActionEvent e)  { placeBid(currentPrice + 5_000_000); }
+    @FXML void handleQuickBid10(ActionEvent e) { placeBid(currentPrice + 10_000_000); }
+    @FXML void handleQuickBid50(ActionEvent e) { placeBid(currentPrice + 50_000_000); }
 
     @FXML
     void handleBack(ActionEvent event) {
         if (countdownTimer != null) countdownTimer.stop();
+
         try {
             Parent root = FXMLLoader.load(getClass().getResource("role-selection.fxml"));
             Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
@@ -147,8 +142,28 @@ public class AuctionController {
         }
     }
 
-    // ===== Tiện ích private =====
+    @FXML
+    void handleEnableAutoBid(ActionEvent event) {
+        String input = txtAutoBidMax.getText().trim().replaceAll("[.,\\s]", "");
+        if (input.isEmpty()) {
+            showMessage("⚠ Vui lòng nhập giá tối đa auto bid!", false);
+            return;
+        }
+        try {
+            double maxAmount = Double.parseDouble(input);
+            if (maxAmount <= currentPrice) {
+                showMessage("❌ Giá auto bid phải lớn hơn giá hiện tại!", false);
+                return;
+            }
+            autoBidEnabled = true;
+            autoBidMaxAmount = maxAmount;
+            showMessage("🤖 Auto bidding đã bật tới " + formatMoney(maxAmount) + " ₫", true);
+        } catch (NumberFormatException e) {
+            showMessage("❌ Giá auto bid không hợp lệ!", false);
+        }
+    }
 
+    // ===== Tiện ích private =====
     private void refreshUI() {
         if (lblCurrentPrice != null) lblCurrentPrice.setText(formatMoney(currentPrice) + " ₫");
         if (lblTopBidder    != null) lblTopBidder.setText("👑 người đặt: " + topBidder);
@@ -175,12 +190,6 @@ public class AuctionController {
         countdownTimer.play();
     }
 
-    /** Đặt giá nhanh: cộng thêm delta vào giá hiện tại và đặt luôn */
-    private void quickBid(double delta) {
-        double newAmount = currentPrice + delta;
-        placeBid(newAmount);
-    }
-
     private void placeBid(double amount) {
         if (totalSeconds <= 0) {
             showMessage("⏰ Phiên đấu giá đã kết thúc!", false);
@@ -198,11 +207,9 @@ public class AuctionController {
         User user = RegisterController.currentUser;
         String bidderName = (user != null) ? user.getUsername() : "Ẩn danh";
 
-        // Kiểm tra số dư nếu là Bidder
         if (user instanceof user.Bidder bidder) {
             if (amount > bidder.getBalance()) {
-                showMessage(
-                    "💸 Không đủ số dư! Bạn chỉ còn " + formatMoney(bidder.getBalance()) + " ₫", false);
+                showMessage("💸 Không đủ số dư! Bạn chỉ còn " + formatMoney(bidder.getBalance()) + " ₫", false);
                 return;
             }
         }
@@ -211,13 +218,10 @@ public class AuctionController {
         topBidder    = bidderName;
         bidCount++;
 
-        // Trừ tiền khỏi tài khoản Bidder
         if (user instanceof user.Bidder bidder) {
             bidder.setBalance(bidder.getBalance() - amount);
-            // Cập nhật lại nhãn số dư
             if (lblUserInfo != null) {
-                lblUserInfo.setText(
-                    "👤 " + user.getUsername() + "  |  💰 " + formatMoney(bidder.getBalance()) + " ₫");
+                lblUserInfo.setText("👤 " + user.getUsername() + "  |  💰 " + formatMoney(bidder.getBalance()) + " ₫");
             }
         }
 
@@ -229,26 +233,46 @@ public class AuctionController {
         if (txtBidAmount != null) txtBidAmount.clear();
         refreshUI();
         showMessage("✅ Đặt giá thành công: " + formatMoney(amount) + " ₫", true);
-    }
 
-    private void showMessage(String msg, boolean isSuccess) {
-        if (lblMessage != null) {
-            lblMessage.setText(msg);
-            lblMessage.setStyle(isSuccess
-                    ? "-fx-text-fill: #4af0a0; -fx-font-size: 13px;"
-                    : "-fx-text-fill: #ff7777; -fx-font-size: 13px;");
+        // ===== AUTO BIDDING LOGIC =====
+        if (autoBidEnabled && user != null && !bidderName.equals(user.getUsername())) {
+            double nextBid = amount + MIN_STEP;
+            if (nextBid <= autoBidMaxAmount) {
+                Timeline autoBidDelay = new Timeline(
+                        new KeyFrame(Duration.seconds(1), ev -> placeBid(nextBid))
+                );
+                autoBidDelay.play();
+                showMessage("🤖 Hệ thống đang tự động nâng giá...", true);
+            } else {
+                showMessage("⚠ Auto bid đã đạt giới hạn tối đa!", false);
+                autoBidEnabled = false;
+            }
         }
     }
 
-    /** Được gọi bởi AuctionSocketClient khi nhận bid mới từ server. */
+    /** Được gọi bởi AuctionSocketClient khi nhận bid mới từ server (Tính năng của master) */
     public void applyNewBidToUI(double amount, String bidderName) {
         currentPrice = amount;
         topBidder    = bidderName;
         bidCount++;
         String historyEntry = String.format("🔺 %s → %s ₫", bidderName, formatMoney(amount));
-        if (listBidHistory != null) listBidHistory.getItems().add(0, historyEntry);
+        if (listBidHistory != null) {
+            listBidHistory.getItems().add(0, historyEntry);
+        }
         refreshUI();
         showMessage("🌐 Giá mới từ " + bidderName + ": " + formatMoney(amount) + " ₫", true);
+
+        // Kích hoạt ngược lại AutoBid nếu người vừa đặt online không phải là mình
+        User user = RegisterController.currentUser;
+        if (autoBidEnabled && user != null && !bidderName.equals(user.getUsername())) {
+            double nextBid = amount + MIN_STEP;
+            if (nextBid <= autoBidMaxAmount) {
+                Timeline autoBidDelay = new Timeline(
+                        new KeyFrame(Duration.seconds(1), ev -> placeBid(nextBid))
+                );
+                autoBidDelay.play();
+            }
+        }
     }
 
     private String formatMoney(double amount) {
