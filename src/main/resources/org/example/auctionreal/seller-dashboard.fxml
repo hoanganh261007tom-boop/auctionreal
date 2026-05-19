@@ -40,8 +40,11 @@
                 <!-- ==========================================
                      CỘT TRÁI: FORM ĐĂNG VẬT PHẨM
                      ========================================== -->
-                <VBox prefWidth="440" HBox.hgrow="NEVER" spacing="12"
-                      style="-fx-background-color: #1a1a2e; -fx-background-radius: 16; -fx-padding: 24;">
+                <ScrollPane HBox.hgrow="ALWAYS" prefWidth="500" minWidth="450"
+                             fitToWidth="true" hbarPolicy="NEVER" vbarPolicy="AS_NEEDED"
+                             style="-fx-background-color: #1a1a2e; -fx-background: #1a1a2e; -fx-border-color: transparent; -fx-background-radius: 16;">
+                <VBox prefWidth="480" spacing="14"
+                      style="-fx-background-color: #1a1a2e; -fx-background-radius: 16; -fx-padding: 28;">
                     <children>
 
                         <!-- Tiêu đề form -->
@@ -188,6 +191,7 @@
 
                     </children>
                 </VBox>
+                </ScrollPane>
 
                 <!-- ============================================
                      CỘT PHẢI: DANH SÁCH VẬT PHẨM ĐÃ ĐĂNG
