@@ -15,9 +15,13 @@ import user.User;
 import java.io.IOException;
 
 /**
- * RoleSelectionController: Xử lý logic khi người dùng chọn làm Người bán hoặc Người mua.
+ * RoleSelectionController: Xử lý logic khi người dùng chọn làm Người bán hoặc
+ * Người mua.
  */
 public class RoleSelectionController {
+
+    /** ✏️ Điều chỉnh số tiền ban đầu của Bidder tại đây */
+    private static final double INITIAL_BALANCE = 50_000_000.0;
 
     @FXML
     private Label lblWelcome;
@@ -51,8 +55,8 @@ public class RoleSelectionController {
     @FXML
     void handleSelectBidder(ActionEvent event) {
         User temp = RegisterController.currentUser;
-        // Chuyển đổi sang đối tượng Bidder với số dư mặc định 50.000.000 ₫
-        RegisterController.currentUser = new Bidder(temp.getId(), temp.getUsername(), "n/a", 50_000_000.0);
+        // Chuyển đổi sang đối tượng Bidder với số dư ban đầu từ INITIAL_BALANCE
+        RegisterController.currentUser = new Bidder(temp.getId(), temp.getUsername(), "n/a", INITIAL_BALANCE);
         System.out.println("Hệ thống: Bạn đã chọn vai trò BIDDER");
         // Chuyển sang Bidder Dashboard
         try {
@@ -94,6 +98,17 @@ public class RoleSelectionController {
         Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
         stage.setScene(new Scene(root));
         stage.setTitle("Đăng ký tài khoản");
+        stage.show();
+    }
+
+    private void switchToScreen(ActionEvent event, String fxmlFile, String title,
+            double width, double height) throws IOException {
+        FXMLLoader loader = new FXMLLoader(
+                getClass().getResource("/org/example/auctionreal/" + fxmlFile));
+        Parent root = loader.load();
+        Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
+        stage.setScene(new Scene(root, width, height));
+        stage.setTitle(title);
         stage.show();
     }
 }
