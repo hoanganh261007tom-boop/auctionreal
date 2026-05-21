@@ -1,6 +1,8 @@
 package org.example.auctionreal;
 
 import database.dao.ItemDAO;
+import database.dao.ItemDAO.AuctionItemInfo;
+import database.dao.WatchlistDAO;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -18,93 +20,47 @@ import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import database.dao.WatchlistDAO;
 
-/**
- * BidderDashboardController: Xử lý màn hình dành cho Người Mua (Bidder).
- * Cho phép Bidder tìm kiếm, duyệt vật phẩm đang đấu giá và tham gia phiên đấu
- * giá.
- */
 public class BidderDashboardController {
 
-    // ===== Các phần tử UI (phải khớp fx:id trong bidder-dashboard.fxml) =====
+    // ===== UI Elements =====
+    @FXML private Label lblUserInfo;
+    @FXML private Label lblBalance;
+    @FXML private TextField txtSearch;
+    @FXML private ComboBox<String> cmbFilterCategory;
+    @FXML private ComboBox<String> cmbFilterPrice;
+    @FXML private ComboBox<String> cmbFilterStatus;
+    @FXML private Label lblLiveCount;
+    @FXML private Label lblEndingSoon;
+    @FXML private Label lblLeading;
+    @FXML private Label lblTotalItems;
+    @FXML private ListView<String> listAuctionItems;
+    @FXML private ComboBox<String> cmbSort;
+    @FXML private Label lblPage;
+    @FXML private Label lblStatusBadge;
+    @FXML private Label lblSessionId;
+    @FXML private Label lblItemName;
+    @FXML private Label lblSellerName;
+    @FXML private Label lblItemEmoji;
+    @FXML private Label lblItemCategory;
+    @FXML private Label lblDescription;
+    @FXML private HBox hboxTags;
+    @FXML private Label lblCurrentPrice;
+    @FXML private Label lblTopBidder;
+    @FXML private Label lblCountdown;
+    @FXML private Button btnJoinAuction;
+    @FXML private Button btnWatchlist;
 
-    // Thanh trên
-    @FXML
-    private Label lblUserInfo;
-    @FXML
-    private Label lblBalance;
-
-    // Thanh tìm kiếm & bộ lọc
-    @FXML
-    private TextField txtSearch;
-    @FXML
-    private ComboBox<String> cmbFilterCategory;
-    @FXML
-    private ComboBox<String> cmbFilterPrice;
-    @FXML
-    private ComboBox<String> cmbFilterStatus;
-
-    // Thống kê nhanh
-    @FXML
-    private Label lblLiveCount;
-    @FXML
-    private Label lblEndingSoon;
-    @FXML
-    private Label lblLeading;
-    @FXML
-    private Label lblTotalItems;
-
-    // Danh sách vật phẩm
-    @FXML
-    private ListView<String> listAuctionItems;
-    @FXML
-    private ComboBox<String> cmbSort;
-    @FXML
-    private Label lblPage;
-
-    // Panel chi tiết
-    @FXML
-    private Label lblStatusBadge;
-    @FXML
-    private Label lblSessionId;
-    @FXML
-    private Label lblItemName;
-    @FXML
-    private Label lblSellerName;
-    @FXML
-    private Label lblItemEmoji;
-    @FXML
-    private Label lblItemCategory;
-    @FXML
-    private Label lblDescription;
-    @FXML
-    private HBox hboxTags;
-    @FXML
-    private Label lblCurrentPrice;
-    @FXML
-    private Label lblTopBidder;
-    @FXML
-    private Label lblCountdown;
-    @FXML
-    private Button btnJoinAuction;
-    @FXML
-    private Button btnWatchlist;
-
-    // ===== Dữ liệu nội bộ =====
     private final NumberFormat currencyFormat = NumberFormat.getNumberInstance(new Locale("vi", "VN"));
 
-    /** Danh sách vật phẩm demo (sẽ thay bằng dữ liệu từ database sau). */
-    private final List<AuctionItemDemo> demoItems = new ArrayList<>();
+    /** Danh sách item từ DB (hoặc demo nếu DB trống). */
+    private final List<AuctionItemInfo> auctionItems = new ArrayList<>();
 
     private int currentPage = 1;
     private static final int PAGE_SIZE = 10;
 
-    // ===== Khởi tạo =====
-
     @FXML
     public void initialize() {
-        // Hiển thị thông tin người dùng & số dư
         User user = RegisterController.currentUser;
         if (user != null) {
             lblUserInfo.setText("👤 " + user.getUsername() + "  |  BIDDER");
@@ -118,81 +74,57 @@ public class BidderDashboardController {
             lblBalance.setText("---");
         }
 
-        // Đổ dữ liệu bộ lọc
-        cmbFilterCategory.getItems().addAll("Tất cả", "Đồng hồ", "Điện tử", "Trang sức", "Xe cộ", "Nghệ thuật",
-                "Thời trang", "Khác");
+        cmbFilterCategory.getItems().addAll("Tất cả","Đồng hồ","Điện tử","Trang sức","Xe cộ","Nghệ thuật","Thời trang","Khác");
         cmbFilterCategory.setValue("Tất cả");
-
-        cmbFilterPrice.getItems().addAll("Tất cả", "Dưới 10 triệu", "10 - 100 triệu", "100 - 500 triệu",
-                "Trên 500 triệu");
+        cmbFilterPrice.getItems().addAll("Tất cả","Dưới 10 triệu","10 - 100 triệu","100 - 500 triệu","Trên 500 triệu");
         cmbFilterPrice.setValue("Tất cả");
-
-        cmbFilterStatus.getItems().addAll("Tất cả", "Đang diễn ra", "Sắp kết thúc (30 phút)", "Sắp bắt đầu");
+        cmbFilterStatus.getItems().addAll("Tất cả","Đang diễn ra","Sắp kết thúc (30 phút)","Sắp bắt đầu");
         cmbFilterStatus.setValue("Tất cả");
-
-        cmbSort.getItems().addAll("Mới nhất", "Giá thấp → cao", "Giá cao → thấp", "Kết thúc sớm nhất");
+        cmbSort.getItems().addAll("Mới nhất","Giá thấp → cao","Giá cao → thấp","Kết thúc sớm nhất");
         cmbSort.setValue("Mới nhất");
 
-        // Load dữ liệu từ Database (fallback sang demo nếu DB trống)
         loadItemsFromDatabase();
         refreshItemList();
         refreshStats();
     }
 
-    // ===== XỬ LÝ SỰ KIỆN =====
-
-    /**
-     * handleSearch: Tìm kiếm và lọc danh sách vật phẩm.
-     */
     @FXML
     void handleSearch(ActionEvent event) {
         String keyword = txtSearch.getText().trim().toLowerCase();
         listAuctionItems.getItems().clear();
-        for (AuctionItemDemo item : demoItems) {
-            boolean matchKeyword = keyword.isEmpty() || item.name.toLowerCase().contains(keyword);
-            if (matchKeyword) {
+        for (AuctionItemInfo item : auctionItems) {
+            if (keyword.isEmpty() || item.name.toLowerCase().contains(keyword)) {
                 listAuctionItems.getItems().add(formatItemForList(item));
             }
         }
         lblPage.setText("Trang 1 / 1");
     }
 
-    /**
-     * handleItemSelected: Khi người dùng nhấp vào một vật phẩm trong danh sách.
-     */
     @FXML
     void handleItemSelected(javafx.scene.input.MouseEvent event) {
         int idx = listAuctionItems.getSelectionModel().getSelectedIndex();
-        if (idx < 0 || idx >= demoItems.size())
-            return;
-
-        AuctionItemDemo item = demoItems.get(idx);
-        updateDetailPanel(item);
+        if (idx < 0 || idx >= auctionItems.size()) return;
+        updateDetailPanel(auctionItems.get(idx));
     }
 
-    /**
-     * handleJoinAuction: Truyền dữ liệu vật phẩm được chọn vào AuctionController,
-     * sau đó chuyển sang màn hình đấu giá auction.fxml.
-     */
     @FXML
     void handleJoinAuction(ActionEvent event) {
         int idx = listAuctionItems.getSelectionModel().getSelectedIndex();
-        if (idx < 0)
-            return;
+        if (idx < 0 || idx >= auctionItems.size()) return;
 
-        AuctionItemDemo item = demoItems.get(idx);
+        AuctionItemInfo item = auctionItems.get(idx);
 
-        // ---- Truyền dữ liệu vật phẩm vào AuctionController ----
-        AuctionController.selectedName = item.name;
-        AuctionController.selectedSubtitle = item.seller + "  •  " + item.condition;
-        AuctionController.selectedEmoji = item.emoji;
-        AuctionController.selectedBrand = item.name.toUpperCase();
-        AuctionController.selectedDescription = item.description;
-        AuctionController.selectedStartPrice = item.currentPrice;
-        AuctionController.selectedMinStep = 1_000_000.0; // mặc định 1M, có thể mở rộng sau
-        AuctionController.selectedDuration = 2; // mặc định 2 phút, có thể mở rộng sau
+        // ---- Truyền đầy đủ dữ liệu vào AuctionController ----
+        AuctionController.selectedName        = item.name;
+        AuctionController.selectedSubtitle    = item.sellerName + "  •  " + item.status;
+        AuctionController.selectedEmoji       = "🏷";
+        AuctionController.selectedBrand       = item.name.toUpperCase();
+        AuctionController.selectedDescription = item.description != null ? item.description : "(Không có mô tả)";
+        AuctionController.selectedStartPrice  = item.currentPrice > 0 ? item.currentPrice : item.startPrice;
+        AuctionController.selectedMinStep     = item.minStep > 0 ? item.minStep : 1_000_000.0;
+        AuctionController.selectedDuration    = 2; // mặc định, có thể mở rộng
+        AuctionController.selectedAuctionId   = item.auctionId; // ← auction_id THẬT từ DB
 
-        // ---- Chuyển sang trang đấu giá ----
         try {
             Parent root = FXMLLoader.load(getClass().getResource("auction.fxml"));
             Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
@@ -208,91 +140,49 @@ public class BidderDashboardController {
         }
     }
 
-    /**
-     * handleWatchlist: Thêm / bỏ vật phẩm khỏi danh sách theo dõi.
-     */
     @FXML
     void handleWatchlist(ActionEvent event) {
+        User user = RegisterController.currentUser;
+        if (user == null) return;
 
-        User user =
-                RegisterController.currentUser;
+        int idx = listAuctionItems.getSelectionModel().getSelectedIndex();
+        if (idx < 0 || idx >= auctionItems.size()) return;
 
-        if (user == null) {
-
+        int auctionId = auctionItems.get(idx).auctionId;
+        if (auctionId == -1) {
+            btnWatchlist.setText("❌ Chưa có phiên đấu giá");
             return;
         }
 
-        int userId =
-                Integer.parseInt(
-                        user.getId()
-                );
-
-        WatchlistDAO watchlistDAO =
-                new WatchlistDAO();
-
-        boolean success =
-
-                watchlistDAO.addToWatchlist(
-                        userId,
-                        AuctionController.selectedAuctionId
-                );
-
-        if (success) {
-
-            btnWatchlist.setText(
-                    "✅ Đã thêm theo dõi"
-            );
-
-        } else {
-
-            btnWatchlist.setText(
-                    "❌ Lỗi watchlist"
-            );
-        }
+        int userId = Integer.parseInt(user.getId());
+        WatchlistDAO watchlistDAO = new WatchlistDAO();
+        boolean success = watchlistDAO.addToWatchlist(userId, auctionId);
+        btnWatchlist.setText(success ? "✅ Đã thêm theo dõi" : "❌ Lỗi watchlist");
     }
 
-    /**
-     * handleMyBids: Xem lịch sử đặt giá của bản thân.
-     */
     @FXML
     void handleMyBids(ActionEvent event) {
         Alert info = new Alert(Alert.AlertType.INFORMATION);
         info.setTitle("Lịch sử đặt giá");
         info.setHeaderText("📋 Lịch sử đặt giá của bạn");
-        info.setContentText(
-                "Tính năng này sẽ hiển thị toàn bộ lịch sử đặt giá của bạn.\n(Kết nối database trong phiên bản tiếp theo)");
+        info.setContentText("Tính năng này sẽ hiển thị toàn bộ lịch sử đặt giá của bạn.");
         info.showAndWait();
     }
 
-    /** handlePrevPage / handleNextPage: Phân trang danh sách. */
     @FXML
     void handlePrevPage(ActionEvent event) {
-        if (currentPage > 1) {
-            currentPage--;
-            refreshItemList();
-        }
+        if (currentPage > 1) { currentPage--; refreshItemList(); }
     }
 
     @FXML
     void handleNextPage(ActionEvent event) {
-        int totalPages = Math.max(1, (int) Math.ceil((double) demoItems.size() / PAGE_SIZE));
-        if (currentPage < totalPages) {
-            currentPage++;
-            refreshItemList();
-        }
+        int totalPages = Math.max(1, (int) Math.ceil((double) auctionItems.size() / PAGE_SIZE));
+        if (currentPage < totalPages) { currentPage++; refreshItemList(); }
     }
 
-    /**
-     * handleFilter: Không dùng trực tiếp (ComboBox dùng handleSearch). Dự phòng.
-     */
     @FXML
-    void handleFilter(ActionEvent event) {
-        handleSearch(event);
-    }
+    void handleFilter(ActionEvent event) { handleSearch(event); }
 
-    /**
-     * handleBack: Quay về màn hình chọn vai trò.
-     */
     @FXML
     void handleBack(ActionEvent event) throws IOException {
         Parent root = FXMLLoader.load(getClass().getResource("role-selection.fxml"));
@@ -305,141 +195,87 @@ public class BidderDashboardController {
         stage.show();
     }
 
-    // ===== TIỆN ÍCH PRIVATE =====
+    // ===== PRIVATE METHODS =====
 
-    // ===== NẠP DỮ LIỆU =====
-
-    /**
-     * Load vật phẩm từ Database.
-     * Nếu DB trống hoặc không kết nối được, tự động dùng dữ liệu demo.
-     */
     private void loadItemsFromDatabase() {
-        demoItems.clear();
+        auctionItems.clear();
         ItemDAO itemDAO = new ItemDAO();
-        List<String> dbItems = itemDAO.getAllItemsFormatted();
+        List<AuctionItemInfo> dbItems = itemDAO.getAllAuctionItems();
 
         if (!dbItems.isEmpty()) {
-            // Dữ liệu từ DB: chuyển sang AuctionItemDemo đơn giản
-            for (String line : dbItems) {
-                // Format: "🏷 name | price ₫ | seller | status"
-                String[] parts = line.split("  \\|  ");
-                String name   = parts.length > 0 ? parts[0].replace("🏷 ", "").trim() : "?";
-                String seller = parts.length > 2 ? parts[2].replace("👤 ", "").trim() : "Hệ thống";
-                demoItems.add(new AuctionItemDemo(
-                        name, seller,
-                        "(Mô tả từ database)",
-                        0, "Khác", "🏷", "--", "--:--:--"));
-            }
-            // Đồng thời cập nhật ListView trực tiếp với chuỗi đầy đủ từ DB
-            listAuctionItems.getItems().clear();
-            listAuctionItems.getItems().addAll(dbItems);
+            auctionItems.addAll(dbItems);
         } else {
-            // Fallback: dùng demo nếu DB chưa có dữ liệu
-            System.out.println("[BidderDashboard] DB trống hoặc chưa kết nối, dùng demo data.");
+            // Fallback demo nếu DB trống
+            System.out.println("[BidderDashboard] DB trống, dùng demo data.");
             loadDemoItems();
         }
     }
 
-    /**
-     * Load dữ liệu demo. Dùng khi DB chưa sẵn sàng.
-     */
     private void loadDemoItems() {
-        demoItems.add(new AuctionItemDemo("Rolex Submariner Date 2023", "Nguyen Hoang Anh",
-                "Đồng hồ lặn biểu tượng, bezel ceramic đen, tình trạng mới 98%.",
-                285_000_000, "Đồng hồ", "🕰", "Như mới", "01:45:30"));
-        demoItems.add(new AuctionItemDemo("iPhone 15 Pro Max 256GB", "Le Dinh Bach",
-                "Máy nguyên seal, màu titan tự nhiên, bảo hành Apple 12 tháng.",
-                35_000_000, "Điện tử", "📱", "Mới 100%", "00:30:00"));
-        demoItems.add(new AuctionItemDemo("Nhẫn kim cương 2 carat GIA", "Nguyen Danh Hai",
-                "Kim cương thiên nhiên, chứng nhận GIA, vàng trắng 18K.",
-                450_000_000, "Trang sức", "💍", "Mới 100%", "03:00:00"));
-        demoItems.add(new AuctionItemDemo("Toyota Land Cruiser 2022", "Le Dinh Bach",
-                "ODO 15.000km, xe nhập khẩu chính hãng, đầy đủ giấy tờ.",
-                4_500_000_000L, "Xe cộ", "🚙", "Như mới", "02:15:00"));
-        demoItems.add(new AuctionItemDemo("Tranh sơn dầu cổ điển (1895)", "Nguyen Minh Hieu",
-                "Tranh gốc thế kỷ 19, có chứng chỉ xác thực, kích thước 80x120cm.",
-                125_000_000, "Nghệ thuật", "🖼", "Cổ vật", "05:00:00"));
+        AuctionItemInfo d1 = new AuctionItemInfo();
+        d1.auctionId = -1; d1.name = "Rolex Submariner 2023"; d1.sellerName = "Nguyen Hoang Anh";
+        d1.description = "Đồng hồ lặn biểu tượng, bezel ceramic đen, tình trạng mới 98%.";
+        d1.startPrice = 285_000_000; d1.currentPrice = 285_000_000; d1.minStep = 1_000_000; d1.status = "OPEN";
+        auctionItems.add(d1);
+
+        AuctionItemInfo d2 = new AuctionItemInfo();
+        d2.auctionId = -1; d2.name = "iPhone 15 Pro Max 256GB"; d2.sellerName = "Le Dinh Bach";
+        d2.description = "Máy nguyên seal, màu titan tự nhiên, bảo hành Apple 12 tháng.";
+        d2.startPrice = 35_000_000; d2.currentPrice = 35_000_000; d2.minStep = 500_000; d2.status = "OPEN";
+        auctionItems.add(d2);
     }
 
-    /** Làm mới danh sách trong ListView theo trang hiện tại. */
     private void refreshItemList() {
         listAuctionItems.getItems().clear();
         int start = (currentPage - 1) * PAGE_SIZE;
-        int end = Math.min(start + PAGE_SIZE, demoItems.size());
+        int end = Math.min(start + PAGE_SIZE, auctionItems.size());
         for (int i = start; i < end; i++) {
-            listAuctionItems.getItems().add(formatItemForList(demoItems.get(i)));
+            listAuctionItems.getItems().add(formatItemForList(auctionItems.get(i)));
         }
-        int totalPages = Math.max(1, (int) Math.ceil((double) demoItems.size() / PAGE_SIZE));
+        int totalPages = Math.max(1, (int) Math.ceil((double) auctionItems.size() / PAGE_SIZE));
         lblPage.setText("Trang " + currentPage + " / " + totalPages);
     }
 
-    /** Làm mới các ô thống kê nhanh. */
     private void refreshStats() {
-        lblTotalItems.setText(String.valueOf(demoItems.size()));
-        lblLiveCount.setText(String.valueOf(demoItems.size())); // demo: tất cả đều live
-        lblEndingSoon.setText("2"); // demo cứng
+        lblTotalItems.setText(String.valueOf(auctionItems.size()));
+        lblLiveCount.setText(String.valueOf(auctionItems.size()));
+        lblEndingSoon.setText("0");
         lblLeading.setText("0");
     }
 
-    /** Tạo chuỗi hiển thị gọn cho một vật phẩm trong ListView. */
-    private String formatItemForList(AuctionItemDemo item) {
-        return String.format("%s %s  |  %s ₫  |  ⏱ %s",
-                item.emoji,
+    private String formatItemForList(AuctionItemInfo item) {
+        double displayPrice = item.currentPrice > 0 ? item.currentPrice : item.startPrice;
+        return String.format("🏷 %s  |  %s ₫  |  👤 %s  |  %s",
                 item.name,
-                currencyFormat.format((long) item.currentPrice),
-                item.countdown);
+                currencyFormat.format((long) displayPrice),
+                item.sellerName,
+                item.status != null ? item.status : "OPEN");
     }
 
-    /** Cập nhật panel chi tiết khi người dùng chọn vật phẩm. */
-    private void updateDetailPanel(AuctionItemDemo item) {
+    private void updateDetailPanel(AuctionItemInfo item) {
         lblItemName.setText(item.name);
-        lblSellerName.setText("Người bán: " + item.seller);
-        lblItemEmoji.setText(item.emoji);
-        lblItemCategory.setText(item.category);
-        lblDescription.setText(item.description);
-        lblCurrentPrice.setText(currencyFormat.format((long) item.currentPrice) + " ₫");
+        lblSellerName.setText("Người bán: " + item.sellerName);
+        lblItemEmoji.setText("🏷");
+        lblItemCategory.setText(item.status != null ? item.status : "OPEN");
+        lblDescription.setText(item.description != null && !item.description.isBlank()
+                ? item.description : "(Không có mô tả)");
+
+        double displayPrice = item.currentPrice > 0 ? item.currentPrice : item.startPrice;
+        lblCurrentPrice.setText(currencyFormat.format((long) displayPrice) + " ₫");
         lblTopBidder.setText("👑 Chưa có ai dẫn đầu");
-        lblCountdown.setText(item.countdown);
-        lblSessionId.setText("Phiên #" + (demoItems.indexOf(item) + 1001));
+        lblCountdown.setText("--:--:--");
+        lblSessionId.setText(item.auctionId > 0 ? "Phiên #" + item.auctionId : "Chưa có phiên");
 
-        // Cập nhật tag trạng thái
         hboxTags.getChildren().clear();
-        Label tagCondition = new Label(item.condition);
-        tagCondition.setStyle(
-                "-fx-text-fill: #4af0a0; -fx-background-color: #0a2a1a; -fx-background-radius: 8; -fx-padding: 3 10 3 10; -fx-font-size: 12px;");
-        Label tagCat = new Label(item.category);
-        tagCat.setStyle(
-                "-fx-text-fill: #4ab0f0; -fx-background-color: #0a1a2a; -fx-background-radius: 8; -fx-padding: 3 10 3 10; -fx-font-size: 12px;");
-        hboxTags.getChildren().addAll(tagCondition, tagCat);
+        Label tagStatus = new Label(item.status != null ? item.status : "OPEN");
+        tagStatus.setStyle("-fx-text-fill: #4af0a0; -fx-background-color: #0a2a1a; -fx-background-radius: 8; -fx-padding: 3 10 3 10; -fx-font-size: 12px;");
+        Label tagStep = new Label("Bước: " + currencyFormat.format((long) item.minStep) + " ₫");
+        tagStep.setStyle("-fx-text-fill: #4ab0f0; -fx-background-color: #0a1a2a; -fx-background-radius: 8; -fx-padding: 3 10 3 10; -fx-font-size: 12px;");
+        hboxTags.getChildren().addAll(tagStatus, tagStep);
 
-        // Bật nút tham gia
-        btnJoinAuction.setDisable(false);
+        btnJoinAuction.setDisable(item.auctionId == -1);
         btnWatchlist.setText("🔖  Thêm vào danh sách theo dõi");
-        btnWatchlist.setStyle(
-                "-fx-background-color: #1e1e3a; -fx-text-fill: #aaaacc; -fx-font-size: 12px; -fx-background-radius: 8; -fx-cursor: hand;");
-    }
-
-    // ===== DATA CLASS =====
-
-    /**
-     * AuctionItemDemo: Lưu thông tin một vật phẩm đấu giá (demo).
-     * Sau này sẽ thay bằng class model chính thức kết nối database.
-     */
-    private static class AuctionItemDemo {
-        String name, seller, description, category, emoji, condition, countdown;
-        double currentPrice;
-
-        AuctionItemDemo(String name, String seller, String description,
-                double currentPrice, String category,
-                String emoji, String condition, String countdown) {
-            this.name = name;
-            this.seller = seller;
-            this.description = description;
-            this.currentPrice = currentPrice;
-            this.category = category;
-            this.emoji = emoji;
-            this.condition = condition;
-            this.countdown = countdown;
-        }
+        btnWatchlist.setStyle("-fx-background-color: #1e1e3a; -fx-text-fill: #aaaacc; -fx-font-size: 12px; -fx-background-radius: 8; -fx-cursor: hand;");
     }
 }
+

@@ -247,7 +247,9 @@ public class SellerDashboardController {
 
                         durationMinutes,
 
-                        sellerId
+                        sellerId,
+
+                        minStep  // ← lưu bước giá vào DB
                 );
 
         if (itemId == -1) {
@@ -261,10 +263,17 @@ public class SellerDashboardController {
         }
 
         // ─────────────────────────────
-        // CREATE AUCTION
+        // CREATE AUCTION (tạo phiên đấu giá thật trong bảng auctions)
         // ─────────────────────────────
-        
-        // Bỏ qua bước tạo auction riêng biệt vì items đã lưu thông tin auction (duration, status)
+        AuctionDAO auctionDAO = new AuctionDAO();
+        java.sql.Timestamp now = new java.sql.Timestamp(System.currentTimeMillis());
+        java.sql.Timestamp endTime = new java.sql.Timestamp(
+                System.currentTimeMillis() + (long) durationMinutes * 60 * 1000
+        );
+        boolean auctionCreated = auctionDAO.createAuction(itemId, now, endTime, startPrice);
+        if (!auctionCreated) {
+            showMessage("⚠ Item đã tạo nhưng không tạo được phiên đấu giá!", false);
+        }
 
         // ─────────────────────────────
         // UPDATE UI
