@@ -101,14 +101,5 @@ public class RoleSelectionController {
         stage.show();
     }
 
-    private void switchToScreen(ActionEvent event, String fxmlFile, String title,
-            double width, double height) throws IOException {
-        FXMLLoader loader = new FXMLLoader(
-                getClass().getResource("/org/example/auctionreal/" + fxmlFile));
-        Parent root = loader.load();
-        Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
-        stage.setScene(new Scene(root, width, height));
-        stage.setTitle(title);
-        stage.show();
-    }
+
 }
