@@ -14,8 +14,10 @@ module org.example.auctionreal {
 
     // ── Export để các package khác dùng được ────────────────────────────────
     exports org.example.auctionreal;
+    exports org.example.auctionreal.network;
     exports database;
     exports user;
     exports database.dao;
     opens database.dao to javafx.fxml;
+    opens org.example.auctionreal.network to javafx.fxml;
 }
