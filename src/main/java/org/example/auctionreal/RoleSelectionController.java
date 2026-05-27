@@ -41,7 +41,7 @@ public class RoleSelectionController {
     void handleSelectSeller(ActionEvent event) {
         User temp = RegisterController.currentUser;
         // Chuyển đổi sang đối tượng Seller (giữ ID, Name từ Register)
-        RegisterController.currentUser = new Seller(temp.getId(), temp.getUsername(), "n/a", "Seller");
+        RegisterController.currentUser = new Seller(String.valueOf(temp.getId()), temp.getUsername(), "n/a", "Seller");
         System.out.println("Hệ thống: Bạn đã chọn vai trò SELLER");
         // Chuyển sang Seller Dashboard
         try {

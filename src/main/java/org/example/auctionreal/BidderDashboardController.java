@@ -154,7 +154,7 @@ public class BidderDashboardController {
             return;
         }
 
-        int userId = Integer.parseInt(user.getId());
+        int userId = user.getId();
         WatchlistDAO watchlistDAO = new WatchlistDAO();
         boolean success = watchlistDAO.addToWatchlist(userId, auctionId);
         btnWatchlist.setText(success ? "✅ Đã thêm theo dõi" : "❌ Lỗi watchlist");

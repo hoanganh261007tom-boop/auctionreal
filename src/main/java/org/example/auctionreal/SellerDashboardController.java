@@ -218,10 +218,7 @@ public class SellerDashboardController {
             return;
         }
 
-        int sellerId =
-                Integer.parseInt(
-                        user.getId()
-                );
+        int sellerId = user.getId();
 
         // ─────────────────────────────
         // CREATE ITEM

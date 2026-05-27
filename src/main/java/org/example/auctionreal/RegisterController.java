@@ -52,7 +52,7 @@ public class RegisterController {
         }
 
         // --- Lưu vào bộ nhớ để dùng ở các màn hình sau ---
-        currentUser = new Bidder(String.valueOf(generatedId), name, password, 0.0);
+        currentUser = new Bidder(generatedId, name, password, 0.0);
         System.out.println("[Register] Đăng ký thành công: " + currentUser);
 
         showAlert(Alert.AlertType.INFORMATION,
