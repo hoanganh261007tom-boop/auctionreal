@@ -1,22 +1,49 @@
 package user;
+
+import database.model.Entity;
 import java.io.Serializable;
 
-public class User implements Serializable {
+/**
+ * User – Abstract class đại diện người dùng hệ thống.
+ * Kế thừa Entity. Subclass: Bidder, Seller, Admin
+ * Áp dụng OOP: Inheritance, Abstraction, Encapsulation, Polymorphism
+ */
+public abstract class User extends Entity implements Serializable {
+
     private static final long serialVersionUID = 1L;
-    private String id;
-    protected String username;
-    protected String role;
-    protected String password;
-    public User(String id, String username,String password, String role){
-    this.id = id;
-    this.username = username;
-    this.password = password;
-    this.role = role;
+
+    private String username;
+    private String password;
+    private String role;
+
+    public User(int id, String username, String password, String role) {
+        super(id);
+        this.username = username;
+        this.password = password;
+        this.role     = role;
     }
-    public String getUsername(){return username;}
-    public String getId(){return id;}
-    public String getRole(){return role;}
-    public String getPassword(){return password;}
+
+    // ── Getters – Encapsulation ──
+    public String getUsername() { return username; }
+    public String getPassword() { return password; }
+    public String getRole()     { return role; }
+
+    /**
+     * Giữ tương thích với code cũ (getId() trả String)
+     */
+
+    /**
+     * Mỗi loại user mô tả quyền hạn khác nhau – Polymorphism
+     * Subclass BẮT BUỘC override
+     */
+    public abstract String getPermissions();
+
     @Override
-    public String toString(){return String.format("[%s] %s (ID: %s)", role, username, id);}
+    public String getInfo() {
+        return "[" + role + "] " + username + " (ID: " + super.getId() + ")";
+    }
+
+    @Override
+    public String toString() { return getInfo(); }
 }
+
