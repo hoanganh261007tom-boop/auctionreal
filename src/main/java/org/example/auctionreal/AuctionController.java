@@ -15,6 +15,8 @@ import javafx.stage.Stage;
 import javafx.util.Duration;
 import user.User;
 import org.example.auctionreal.network.SocketClient;
+import org.example.auctionreal.observer.AuctionEventManager;
+import org.example.auctionreal.observer.BidObserver;
 
 import java.io.IOException;
 import java.text.NumberFormat;
@@ -22,57 +24,61 @@ import java.util.Locale;
 import database.dao.BidDAO;
 import database.dao.AuctionDAO;
 
-public class AuctionController {
+/**
+ * AuctionController – Màn hình đấu giá trực tiếp.
+ *
+ * Implements BidObserver để nhận thông báo qua Observer Pattern.
+ * Tích hợp Anti-sniping: nếu có bid trong 30 giây cuối → gia hạn thêm 60 giây.
+ */
+public class AuctionController implements BidObserver {
 
-    // --- Các phần tử UI ---
-    @FXML private Label lblCountdown;
-    @FXML private Label lblCurrentPrice;
-    @FXML private Label lblTopBidder;
-    @FXML private Label lblBidCount;
-    @FXML private Label lblMessage;
-    @FXML private Label lblUserInfo;
-    @FXML private TextField txtBidAmount;
-    @FXML private TextField txtAutoBidMax; // ← field cho Auto Bid
+    // ── UI elements ──
+    @FXML private Label    lblCountdown, lblCurrentPrice, lblTopBidder;
+    @FXML private Label    lblBidCount,  lblMessage,      lblUserInfo;
+    @FXML private Label    lblItemName,  lblItemSubtitle, lblItemEmoji;
+    @FXML private Label    lblItemBrand, lblItemDescription;
+    @FXML private Label    lblStartPrice, lblMinStep;
+    @FXML private TextField txtBidAmount, txtAutoBidMax;
     @FXML private ListView<String> listBidHistory;
 
-    @FXML private Label lblItemName;
-    @FXML private Label lblItemSubtitle;
-    @FXML private Label lblItemEmoji;
-    @FXML private Label lblItemBrand;
-    @FXML private Label lblItemDescription;
-    @FXML private Label lblStartPrice;
-    @FXML private Label lblMinStep;
+    // ── Static data từ BidderDashboard ──
+    public static String selectedName        = "Sản phẩm đấu giá";
+    public static String selectedSubtitle    = "";
+    public static String selectedEmoji       = "🏷";
+    public static String selectedBrand       = "";
+    public static String selectedDescription = "";
+    public static double selectedStartPrice  = 0;
+    public static double selectedMinStep     = 1_000_000;
+    public static int    selectedDuration    = 2;
+    public static int    selectedAuctionId   = 1;
 
-    // Static fields: BidderDashboardController truyền dữ liệu vào đây
-    public static String  selectedName        = "Rolex Submariner Date";
-    public static String  selectedSubtitle    = "Ref. 126610LN • Stainless Steel • 2023";
-    public static String  selectedEmoji       = "🕰";
-    public static String  selectedBrand       = "ROLEX  SUBMARINER";
-    public static String  selectedDescription = "Đồng hồ lặn biểu tượng của Rolex. Tình trạng: Mới 98%.";
-    public static double  selectedStartPrice  = 285_000_000.0;
-    public static double  selectedMinStep     = 1_000_000.0;
-    public static int     selectedDuration    = 2;
-    public static int     selectedAuctionId   = 1;
+    // ── State ──
+    private double  currentPrice;
+    private double  MIN_STEP;
+    private String  topBidder   = "Chưa có ai";
+    private int     bidCount    = 0;
+    private int     totalSeconds;
+    private boolean autoBidEnabled  = false;
+    private double  autoBidMaxPrice = 0;
 
-    private double currentPrice;
-    private double MIN_STEP;
-    private String topBidder = "Chưa có ai";
-    private int bidCount = 0;
-    private int totalSeconds;
+    // ── Anti-sniping: gia hạn nếu bid trong X giây cuối ──
+    private static final int SNIPE_THRESHOLD = 30;  // giây cuối
+    private static final int SNIPE_EXTENSION = 60;  // gia hạn thêm
+    private boolean extended = false;
+
+    // ── Timers ──
     private Timeline countdownTimer;
     private Timeline refreshTimeline;
 
-    // Socket Client
+    // ── Socket ──
     private SocketClient socketClient;
     private boolean socketConnected = false;
 
-    // Auto Bid
-    private boolean autoBidEnabled = false;
-    private double  autoBidMaxPrice = 0;
+    private final NumberFormat fmt = NumberFormat.getNumberInstance(new Locale("vi", "VN"));
 
-    private final NumberFormat currencyFormat =
-            NumberFormat.getNumberInstance(new Locale("vi", "VN"));
-
+    // =====================================================
+    // INITIALIZE
+    // =====================================================
     @FXML
     public void initialize() {
         currentPrice = selectedStartPrice;
@@ -88,280 +94,133 @@ public class AuctionController {
         if (lblMinStep         != null) lblMinStep.setText(formatMoney(selectedMinStep) + " ₫");
 
         User user = RegisterController.currentUser;
-        if (user != null) {
-            lblUserInfo.setText("👤 " + user.getUsername() + "  |  " + user.getRole().toUpperCase());
-        } else {
-            lblUserInfo.setText("👤 Khách");
-        }
+        lblUserInfo.setText(user != null
+                ? "👤 " + user.getUsername() + "  |  " + user.getRole()
+                : "👤 Khách");
 
-        listBidHistory.setStyle(
-                "-fx-background-color: #12122a; -fx-control-inner-background: #12122a; " +
-                        "-fx-base: #12122a; -fx-border-color: transparent;"
-        );
+        listBidHistory.setStyle("-fx-background-color: #12122a; -fx-control-inner-background: #12122a;");
+
+        // Đăng ký Observer
+        AuctionEventManager.getInstance().addObserver(this);
 
         refreshUI();
         loadBidHistoryFromDatabase();
-        connectSocket();       // ← Kết nối socket server
+        connectSocket();
         startRealtimeRefresh();
         startCountdown();
     }
 
-    // ─────────────────────────────
-    // SOCKET CONNECTION
-    // ─────────────────────────────
-
-    /**
-     * Kết nối tới AuctionServer qua SocketClient.
-     * Nếu kết nối thành công → gửi JOIN và lắng nghe push updates.
-     * Nếu thất bại → vẫn dùng polling fallback.
-     */
-    private void connectSocket() {
-        socketClient = new SocketClient("localhost", 9999);
-
-        // Callback xử lý message từ server (chạy trên JavaFX thread)
-        socketClient.setOnMessageReceived(this::handleServerMessage);
-
-        // Callback khi mất kết nối
-        socketClient.setOnDisconnected(() -> {
-            socketConnected = false;
-            System.out.println("[AuctionController] ⚠ Mất kết nối socket, dùng polling fallback.");
-        });
-
-        // Kết nối trong thread nền để không block UI
-        new Thread(() -> {
-            boolean success = socketClient.connect();
-            if (success) {
-                socketConnected = true;
-
-                // Gửi JOIN
-                User user = RegisterController.currentUser;
-                String name = (user != null) ? user.getUsername() : "Khách";
-                int uid = (user != null) ? Integer.parseInt(user.getId()) : 0;
-                socketClient.joinAuction(selectedAuctionId, uid, name);
-
-                System.out.println("[AuctionController] ✅ Socket connected, đã JOIN phiên #" + selectedAuctionId);
-            } else {
-                socketConnected = false;
-                System.out.println("[AuctionController] ⚠ Socket không kết nối được, dùng polling.");
-            }
-        }, "SocketConnect").start();
-    }
-
-    /**
-     * Xử lý message nhận từ server.
-     * Được gọi trên JavaFX Application Thread.
-     */
-    private void handleServerMessage(String message) {
-        String[] parts = message.split(":", 2);
-        String command = parts[0];
-
-        switch (command) {
-            case "BID_UPDATE" -> handleBidUpdate(message);
-            case "AUCTION_CLOSED" -> handleAuctionClosed(message);
-            case "USER_JOINED" -> handleUserJoined(message);
-            case "USER_LEFT" -> handleUserLeft(message);
-            case "ERROR" -> {
-                String errMsg = parts.length > 1 ? parts[1] : "Lỗi không xác định";
-                showMessage("❌ Server: " + errMsg, false);
-            }
-            case "PONG" -> System.out.println("[AuctionController] PONG received.");
-        }
-    }
-
-    /**
-     * Xử lý BID_UPDATE:<auctionId>:<currentPrice>:<topBidder>:<bidCount>
-     */
-    private void handleBidUpdate(String message) {
-        String[] parts = message.split(":");
-        if (parts.length < 5) return;
-
-        try {
-            int auctionId = Integer.parseInt(parts[1]);
-            if (auctionId != selectedAuctionId) return;
-
-            double newPrice = Double.parseDouble(parts[2]);
-            String newTopBidder = parts[3];
-
-            if (newPrice > currentPrice) {
-                currentPrice = newPrice;
-                topBidder = newTopBidder;
-                bidCount++;
-
-                // Cập nhật lịch sử bid
-                String historyEntry = String.format("🔺 %s → %s ₫", newTopBidder, formatMoney(newPrice));
-                listBidHistory.getItems().add(0, historyEntry);
-
-                refreshUI();
-
-                // Hiệu ứng nhấp nháy giá
-                lblCurrentPrice.setStyle(
-                        "-fx-text-fill: #4af0a0; -fx-font-size: 30px; -fx-font-weight: bold;"
-                );
-                new Timeline(new KeyFrame(Duration.millis(800), ev ->
-                        lblCurrentPrice.setStyle(
-                                "-fx-text-fill: #ffffff; -fx-font-size: 30px; -fx-font-weight: bold;"
-                        )
-                )).play();
-
-                // Auto bid nếu đang bật
-                tryAutoBid();
-            }
-        } catch (NumberFormatException e) {
-            System.err.println("[AuctionController] Lỗi parse BID_UPDATE: " + e.getMessage());
-        }
-    }
-
-    /**
-     * Xử lý AUCTION_CLOSED:<auctionId>:<winner>
-     */
-    private void handleAuctionClosed(String message) {
-        String[] parts = message.split(":");
-        if (parts.length < 3) return;
-
-        int auctionId = Integer.parseInt(parts[1]);
+    // =====================================================
+    // OBSERVER PATTERN – nhận thông báo bid mới
+    // =====================================================
+    @Override
+    public void onBidUpdated(int auctionId, double newPrice, String bidderName) {
         if (auctionId != selectedAuctionId) return;
+        // Đã được xử lý qua Socket / handleBidUpdate
+    }
 
-        String winner = parts[2];
+    @Override
+    public void onAuctionClosed(int auctionId, String winner) {
+        if (auctionId != selectedAuctionId) return;
         showMessage("🏆 Phiên đã đóng! Người thắng: " + winner, true);
     }
 
-    /**
-     * Xử lý USER_JOINED:<auctionId>:<username>
-     */
-    private void handleUserJoined(String message) {
-        String[] parts = message.split(":");
-        if (parts.length < 3) return;
-        String joinedUser = parts[2];
-        listBidHistory.getItems().add(0, "👋 " + joinedUser + " đã tham gia phiên.");
-    }
-
-    /**
-     * Xử lý USER_LEFT:<auctionId>:<username>
-     */
-    private void handleUserLeft(String message) {
-        String[] parts = message.split(":");
-        if (parts.length < 3) return;
-        String leftUser = parts[2];
-        listBidHistory.getItems().add(0, "📤 " + leftUser + " đã rời phiên.");
-    }
-
-    // ─────────────────────────────
-    // UI REFRESH
-    // ─────────────────────────────
-
-    private void refreshUI() {
-        lblCurrentPrice.setText(formatMoney(currentPrice) + " ₫");
-        lblTopBidder.setText("👑 người đặt: " + topBidder);
-        lblBidCount.setText(bidCount + " lượt");
-    }
-
+    // =====================================================
+    // COUNTDOWN + ANTI-SNIPING
+    // =====================================================
     private void startCountdown() {
-        countdownTimer = new Timeline(
-                new KeyFrame(Duration.seconds(1), e -> {
-                    if (totalSeconds > 0) {
-                        totalSeconds--;
-                        int h = totalSeconds / 3600;
-                        int m = (totalSeconds % 3600) / 60;
-                        int s = totalSeconds % 60;
-                        lblCountdown.setText(String.format("%02d : %02d : %02d", h, m, s));
-                    } else {
-                        countdownTimer.stop();
-                        lblCountdown.setText("00 : 00 : 00");
-                        lblCountdown.setStyle(
-                                "-fx-text-fill: #ff4444; -fx-font-size: 40px; " +
-                                        "-fx-font-weight: bold; -fx-font-family: 'Monospaced';"
-                        );
-                        AuctionDAO auctionDAO = new AuctionDAO();
-                        auctionDAO.closeAuction(selectedAuctionId);
-                        BidDAO bidDAO = new BidDAO();
-                        String winner = bidDAO.getWinner(selectedAuctionId);
-                        showMessage("🏆 Người thắng: " + winner, true);
-                        txtBidAmount.setDisable(true);
-                        if (txtAutoBidMax != null) txtAutoBidMax.setDisable(true);
-                        autoBidEnabled = false;
-                    }
-                })
-        );
+        countdownTimer = new Timeline(new KeyFrame(Duration.seconds(1), e -> {
+            if (totalSeconds > 0) {
+                totalSeconds--;
+                int h = totalSeconds / 3600;
+                int m = (totalSeconds % 3600) / 60;
+                int s = totalSeconds % 60;
+                lblCountdown.setText(String.format("%02d : %02d : %02d", h, m, s));
+            } else {
+                countdownTimer.stop();
+                lblCountdown.setText("00 : 00 : 00");
+                lblCountdown.setStyle("-fx-text-fill: #ff4444; -fx-font-size: 40px; -fx-font-weight: bold;");
+
+                AuctionDAO auctionDAO = new AuctionDAO();
+                auctionDAO.closeAuction(selectedAuctionId);
+
+                BidDAO bidDAO = new BidDAO();
+                String winner = bidDAO.getWinner(selectedAuctionId);
+                showMessage("🏆 Người thắng: " + winner, true);
+                txtBidAmount.setDisable(true);
+                if (txtAutoBidMax != null) txtAutoBidMax.setDisable(true);
+                autoBidEnabled = false;
+
+                // Thông báo Observer
+                AuctionEventManager.getInstance()
+                        .notifyAuctionClosed(selectedAuctionId, winner);
+            }
+        }));
         countdownTimer.setCycleCount(Timeline.INDEFINITE);
         countdownTimer.play();
     }
 
-    // ─────────────────────────────
-    // BID HANDLING
-    // ─────────────────────────────
+    /**
+     * Anti-sniping: nếu có bid mới trong SNIPE_THRESHOLD giây cuối
+     * → gia hạn thêm SNIPE_EXTENSION giây (chỉ 1 lần)
+     */
+    private void applyAntiSniping() {
+        if (!extended && totalSeconds <= SNIPE_THRESHOLD && totalSeconds > 0) {
+            totalSeconds += SNIPE_EXTENSION;
+            extended = true;
+            showMessage("⏱ Anti-sniping! Phiên được gia hạn thêm "
+                    + SNIPE_EXTENSION + " giây!", true);
+            System.out.println("[AuctionController] Anti-sniping kích hoạt: +"
+                    + SNIPE_EXTENSION + "s");
+        }
+    }
 
+    // =====================================================
+    // BID HANDLING
+    // =====================================================
     @FXML
     void handleBid(ActionEvent event) {
-        String input = txtBidAmount.getText().trim();
+        String input = txtBidAmount.getText().trim().replaceAll("[.,\\s]", "");
         if (input.isEmpty()) {
             showMessage("⚠ Vui lòng nhập số tiền muốn đặt!", false);
             return;
         }
-        input = input.replaceAll("[.,\\\\s]", "");
-        double bidAmount;
         try {
-            bidAmount = Double.parseDouble(input);
+            placeBid(Double.parseDouble(input));
+            txtBidAmount.clear();
         } catch (NumberFormatException e) {
-            showMessage("❌ Số tiền không hợp lệ! Chỉ nhập chữ số.", false);
-            return;
+            showMessage("❌ Số tiền không hợp lệ!", false);
         }
-        placeBid(bidAmount);
-        txtBidAmount.clear();
     }
 
-    // ─────────────────────────────
-    // AUTO BID
-    // ─────────────────────────────
     @FXML
     void handleEnableAutoBid(ActionEvent event) {
-        if (totalSeconds <= 0) {
-            showMessage("⏰ Phiên đấu giá đã kết thúc!", false);
-            return;
-        }
-
-        String input = txtAutoBidMax.getText().trim().replaceAll("[.,\\\\s]", "");
-        if (input.isEmpty()) {
-            showMessage("⚠ Nhập giá tối đa để bật Auto Bid!", false);
-            return;
-        }
-
-        double maxPrice;
+        if (totalSeconds <= 0) { showMessage("⏰ Phiên đã kết thúc!", false); return; }
+        String input = txtAutoBidMax.getText().trim().replaceAll("[.,\\s]", "");
+        if (input.isEmpty()) { showMessage("⚠ Nhập giá tối đa!", false); return; }
         try {
-            maxPrice = Double.parseDouble(input);
+            double maxPrice = Double.parseDouble(input);
+            if (maxPrice <= currentPrice) {
+                showMessage("❌ Giá tối đa phải cao hơn " + formatMoney(currentPrice) + " ₫!", false);
+                return;
+            }
+            autoBidMaxPrice = maxPrice;
+            autoBidEnabled  = true;
+            showMessage("🤖 Auto Bid bật! Tối đa: " + formatMoney(autoBidMaxPrice) + " ₫", true);
+            tryAutoBid();
         } catch (NumberFormatException e) {
             showMessage("❌ Giá tối đa không hợp lệ!", false);
-            return;
         }
-
-        if (maxPrice <= currentPrice) {
-            showMessage("❌ Giá tối đa phải cao hơn giá hiện tại: "
-                    + formatMoney(currentPrice) + " ₫!", false);
-            return;
-        }
-
-        autoBidMaxPrice = maxPrice;
-        autoBidEnabled  = true;
-        showMessage("🤖 Auto Bid đã bật! Tối đa: "
-                + formatMoney(autoBidMaxPrice) + " ₫", true);
-
-        // Thử đặt giá ngay lập tức nếu có thể
-        tryAutoBid();
     }
 
-    /**
-     * Tự động đặt giá nếu Auto Bid đang bật và còn trong hạn mức.
-     */
     private void tryAutoBid() {
-        if (!autoBidEnabled) return;
-        if (totalSeconds <= 0) { autoBidEnabled = false; return; }
-
+        if (!autoBidEnabled || totalSeconds <= 0) { autoBidEnabled = false; return; }
         double nextBid = currentPrice + MIN_STEP;
         if (nextBid <= autoBidMaxPrice) {
             placeBid(nextBid);
         } else {
             autoBidEnabled = false;
-            showMessage("🤖 Auto Bid đã dừng: đã đạt giá tối đa "
-                    + formatMoney(autoBidMaxPrice) + " ₫", false);
+            showMessage("🤖 Auto Bid dừng: đạt tối đa " + formatMoney(autoBidMaxPrice) + " ₫", false);
         }
     }
 
@@ -371,95 +230,119 @@ public class AuctionController {
     @FXML void handleQuickBid50(ActionEvent e) { placeBid(currentPrice + 50_000_000); }
 
     private void placeBid(double amount) {
-        if (totalSeconds <= 0) {
-            showMessage("⏰ Phiên đấu giá đã kết thúc!", false);
-            return;
-        }
+        if (totalSeconds <= 0) { showMessage("⏰ Phiên đã kết thúc!", false); return; }
         if (amount <= currentPrice) {
-            showMessage("❌ Giá đặt phải cao hơn " + formatMoney(currentPrice) + " ₫!", false);
-            return;
+            showMessage("❌ Giá phải cao hơn " + formatMoney(currentPrice) + " ₫!", false); return;
         }
         if (amount < currentPrice + MIN_STEP) {
-            showMessage("❌ Bước giá tối thiểu là " + formatMoney(MIN_STEP) + " ₫!", false);
-            return;
+            showMessage("❌ Bước tối thiểu: " + formatMoney(MIN_STEP) + " ₫!", false); return;
         }
-
         User user = RegisterController.currentUser;
-        if (user == null) {
-            showMessage("❌ Bạn chưa đăng nhập!", false);
-            return;
-        }
+        if (user == null) { showMessage("❌ Chưa đăng nhập!", false); return; }
 
-        int bidderId = Integer.parseInt(user.getId());
+        int bidderId = user.getId();
 
-        // ── Gửi qua Socket nếu đã kết nối ──
         if (socketConnected && socketClient != null) {
             socketClient.placeBid(selectedAuctionId, bidderId, amount);
-            showMessage("⏳ Đang gửi bid tới server...", true);
+            showMessage("⏳ Đang gửi bid...", true);
+            applyAntiSniping(); // Anti-sniping khi có bid
         } else {
-            // ── Fallback: gọi trực tiếp DAO nếu socket không có ──
-            String bidderName = user.getUsername();
+            // Fallback DAO trực tiếp
             BidDAO bidDAO = new BidDAO();
             boolean success = bidDAO.placeBid(selectedAuctionId, bidderId, amount);
-
             if (success) {
                 currentPrice = amount;
-                topBidder = bidderName;
+                topBidder    = user.getUsername();
                 bidCount++;
-
-                String historyEntry = String.format("🔺 %s → %s ₫", bidderName, formatMoney(amount));
-                listBidHistory.getItems().add(0, historyEntry);
+                listBidHistory.getItems().add(0,
+                        "🔺 " + user.getUsername() + " → " + formatMoney(amount) + " ₫");
                 refreshUI();
-
-                lblCurrentPrice.setStyle(
-                        "-fx-text-fill: #4af0a0; -fx-font-size: 30px; -fx-font-weight: bold;"
-                );
-                new Timeline(new KeyFrame(Duration.millis(800), ev ->
-                        lblCurrentPrice.setStyle(
-                                "-fx-text-fill: #ffffff; -fx-font-size: 30px; -fx-font-weight: bold;"
-                        )
-                )).play();
-
+                flashPrice();
                 showMessage("✅ Đặt giá thành công!", true);
+                applyAntiSniping(); // Anti-sniping
             } else {
                 showMessage("❌ Đặt giá thất bại!", false);
             }
         }
     }
 
-    // ─────────────────────────────
-    // NAVIGATION
-    // ─────────────────────────────
-
-    @FXML
-    void handleBack(ActionEvent event) {
-        if (countdownTimer  != null) countdownTimer.stop();
-        if (refreshTimeline != null) refreshTimeline.stop();
-        autoBidEnabled = false;
-
-        // ── Ngắt kết nối socket ──
-        if (socketClient != null) {
-            socketClient.disconnect();
+    // =====================================================
+    // SOCKET
+    // =====================================================
+    private void connectSocket() {
+        socketClient = new SocketClient("localhost", 9999);
+        socketClient.setOnMessageReceived(this::handleServerMessage);
+        socketClient.setOnDisconnected(() -> {
             socketConnected = false;
-        }
+            System.out.println("[AuctionController] Socket mất kết nối, dùng polling.");
+        });
+        new Thread(() -> {
+            boolean ok = socketClient.connect();
+            if (ok) {
+                socketConnected = true;
+                User user = RegisterController.currentUser;
+                String name = user != null ? user.getUsername() : "Khách";
+                int    uid  = user != null ? user.getId() : 0;
+                socketClient.joinAuction(selectedAuctionId, uid, name);
+            }
+        }, "SocketConnect").start();
+    }
 
-        try {
-            Parent root = FXMLLoader.load(getClass().getResource("role-selection.fxml"));
-            Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
-            stage.setMaximized(false);
-            stage.setScene(new Scene(root, 600, 400));
-            stage.setMinWidth(600);
-            stage.setMinHeight(400);
-            stage.setTitle("Lựa chọn vai trò");
-            stage.show();
-        } catch (IOException e) {
-            e.printStackTrace();
+    private void handleServerMessage(String message) {
+        String[] parts = message.split(":", 2);
+        switch (parts[0]) {
+            case "BID_UPDATE"     -> handleBidUpdate(message);
+            case "AUCTION_CLOSED" -> handleAuctionClosed(message);
+            case "USER_JOINED"    -> listBidHistory.getItems().add(0,
+                    "👋 " + (parts.length > 1 ? message.split(":")[2] : "?") + " đã tham gia.");
+            case "USER_LEFT"      -> listBidHistory.getItems().add(0,
+                    "📤 " + (parts.length > 1 ? message.split(":")[2] : "?") + " đã rời.");
+            case "ERROR"          -> showMessage("❌ " + (parts.length > 1 ? parts[1] : "Lỗi"), false);
         }
     }
 
-    // ─────────────────────────────
-    // DATABASE HELPERS
-    // ─────────────────────────────
+    private void handleBidUpdate(String message) {
+        String[] p = message.split(":");
+        if (p.length < 4) return;
+        try {
+            int    auctionId = Integer.parseInt(p[1]);
+            double newPrice  = Double.parseDouble(p[2]);
+            String newTop    = p[3];
+            if (auctionId != selectedAuctionId || newPrice <= currentPrice) return;
+
+            currentPrice = newPrice;
+            topBidder    = newTop;
+            bidCount++;
+            listBidHistory.getItems().add(0, "🔺 " + newTop + " → " + formatMoney(newPrice) + " ₫");
+            refreshUI();
+            flashPrice();
+            applyAntiSniping();
+            tryAutoBid();
+        } catch (NumberFormatException ignored) {}
+    }
+
+    private void handleAuctionClosed(String message) {
+        String[] p = message.split(":");
+        if (p.length < 3) return;
+        if (Integer.parseInt(p[1]) != selectedAuctionId) return;
+        showMessage("🏆 Phiên đóng! Người thắng: " + p[2], true);
+    }
+
+    // =====================================================
+    // HELPERS
+    // =====================================================
+    private void refreshUI() {
+        lblCurrentPrice.setText(formatMoney(currentPrice) + " ₫");
+        lblTopBidder.setText("👑 " + topBidder);
+        lblBidCount.setText(bidCount + " lượt");
+    }
+
+    private void flashPrice() {
+        lblCurrentPrice.setStyle("-fx-text-fill: #4af0a0; -fx-font-size: 30px; -fx-font-weight: bold;");
+        new Timeline(new KeyFrame(Duration.millis(800), ev ->
+                lblCurrentPrice.setStyle("-fx-text-fill: #ffffff; -fx-font-size: 30px; -fx-font-weight: bold;")
+        )).play();
+    }
 
     private void loadBidHistoryFromDatabase() {
         BidDAO bidDAO = new BidDAO();
@@ -468,36 +351,46 @@ public class AuctionController {
     }
 
     private void startRealtimeRefresh() {
-        refreshTimeline = new Timeline(
-                new KeyFrame(Duration.seconds(2), event -> {
-                    BidDAO bidDAO = new BidDAO();
-                    double latestBid = bidDAO.getCurrentBid(selectedAuctionId);
-                    if (latestBid > currentPrice) {
-                        currentPrice = latestBid;
-                        refreshUI();
-                        loadBidHistoryFromDatabase();
-                        // Nếu Auto Bid đang bật và người khác vừa đặt cao hơn → tự động đặt lại
-                        tryAutoBid();
-                    }
-                })
-        );
+        refreshTimeline = new Timeline(new KeyFrame(Duration.seconds(2), event -> {
+            BidDAO bidDAO = new BidDAO();
+            double latest = bidDAO.getCurrentBid(selectedAuctionId);
+            if (latest > currentPrice) {
+                currentPrice = latest;
+                refreshUI();
+                loadBidHistoryFromDatabase();
+                tryAutoBid();
+            }
+        }));
         refreshTimeline.setCycleCount(Timeline.INDEFINITE);
         refreshTimeline.play();
     }
 
-    // ─────────────────────────────
-    // UTILITIES
-    // ─────────────────────────────
-
-    private void showMessage(String msg, boolean isSuccess) {
+    private void showMessage(String msg, boolean ok) {
         lblMessage.setText(msg);
-        lblMessage.setStyle(isSuccess
+        lblMessage.setStyle(ok
                 ? "-fx-text-fill: #4af0a0; -fx-font-size: 13px; -fx-font-weight: bold;"
-                : "-fx-text-fill: #ff7777; -fx-font-size: 13px; -fx-font-weight: bold;"
-        );
+                : "-fx-text-fill: #ff7777; -fx-font-size: 13px; -fx-font-weight: bold;");
     }
 
     private String formatMoney(double amount) {
-        return currencyFormat.format((long) amount);
+        return fmt.format((long) amount);
+    }
+
+    @FXML
+    void handleBack(ActionEvent event) {
+        if (countdownTimer  != null) countdownTimer.stop();
+        if (refreshTimeline != null) refreshTimeline.stop();
+        autoBidEnabled = false;
+        AuctionEventManager.getInstance().removeObserver(this);
+        if (socketClient != null) { socketClient.disconnect(); socketConnected = false; }
+        try {
+            Parent root = FXMLLoader.load(getClass().getResource("role-selection.fxml"));
+            Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
+            stage.setMaximized(false);
+            stage.setScene(new Scene(root, 600, 400));
+            stage.setMinWidth(600); stage.setMinHeight(400);
+            stage.setTitle("Lựa chọn vai trò");
+            stage.show();
+        } catch (IOException e) { e.printStackTrace(); }
     }
 }
