@@ -68,8 +68,8 @@ public class UserDAO {
     // 4. Đăng nhập đầy đủ – trả về LoginResult (id + role + balance) hoặc null
     // ─────────────────────────────────────────────────────────────────────────
     public LoginResult getUserByLogin(String username, String password) {
-        // Thử lấy cả balance nếu có cột đó, ngược lại fallback về 0
-        String sql = "SELECT id, role FROM users WHERE username = ? AND password = ?";
+        // Đã sửa 'id' thành 'user_id' cho khớp với cơ sở dữ liệu
+        String sql = "SELECT user_id, role FROM users WHERE username = ? AND password = ?";
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -79,7 +79,8 @@ public class UserDAO {
 
             ResultSet rs = pstmt.executeQuery();
             if (rs.next()) {
-                int    id      = rs.getInt("id");
+                // Đã sửa 'id' thành 'user_id'
+                int    id      = rs.getInt("user_id");
                 String role    = rs.getString("role");
                 double balance = 0.0;
                 // Thử đọc cột balance nếu tồn tại trong bảng
