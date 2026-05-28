@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.*?>
+
+<AnchorPane minHeight="700.0" minWidth="1100.0"
+            style="-fx-background-color: #0f0f1a;"
+            xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="org.example.auctionreal.AdminDashboardController">
+    <children>
+
+        <!-- Thanh tiêu đề -->
+        <HBox layoutX="0" layoutY="0" prefWidth="1100" prefHeight="55"
+              alignment="CENTER_LEFT" spacing="20"
+              style="-fx-background-color: #1a1a2e; -fx-padding: 0 30 0 30;">
+            <Label text="🛡 ADMIN PANEL"
+                   style="-fx-text-fill: #f0c040; -fx-font-size: 18px; -fx-font-weight: bold;"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Label fx:id="lblAdminInfo"
+                   style="-fx-text-fill: #aaaacc; -fx-font-size: 13px;"/>
+            <Button text="← Quay lại" onAction="#handleBack"
+                    style="-fx-background-color: transparent; -fx-text-fill: #aaaacc; -fx-cursor: hand; -fx-underline: true;"/>
+        </HBox>
+
+        <!-- Nội dung chính -->
+        <VBox AnchorPane.topAnchor="65" AnchorPane.leftAnchor="15"
+              AnchorPane.rightAnchor="15" AnchorPane.bottomAnchor="10" spacing="12">
+
+            <!-- Thống kê -->
+            <HBox spacing="12" prefHeight="80">
+                <VBox alignment="CENTER" prefWidth="240"
+                      style="-fx-background-color: #1a1a2e; -fx-background-radius: 12; -fx-padding: 15;">
+                    <Label text="👥 NGƯỜI DÙNG" style="-fx-text-fill: #666688; -fx-font-size: 11px; -fx-font-weight: bold;"/>
+                    <Label fx:id="lblTotalUsers" text="0 người dùng"
+                           style="-fx-text-fill: #4ab0f0; -fx-font-size: 18px; -fx-font-weight: bold;"/>
+                </VBox>
+                <VBox alignment="CENTER" prefWidth="240"
+                      style="-fx-background-color: #1a1a2e; -fx-background-radius: 12; -fx-padding: 15;">
+                    <Label text="🏷 SẢN PHẨM" style="-fx-text-fill: #666688; -fx-font-size: 11px; -fx-font-weight: bold;"/>
+                    <Label fx:id="lblTotalItems" text="0 sản phẩm"
+                           style="-fx-text-fill: #4af0a0; -fx-font-size: 18px; -fx-font-weight: bold;"/>
+                </VBox>
+                <VBox alignment="CENTER" prefWidth="240"
+                      style="-fx-background-color: #1a1a2e; -fx-background-radius: 12; -fx-padding: 15;">
+                    <Label text="⚡ PHIÊN ĐẤU GIÁ" style="-fx-text-fill: #666688; -fx-font-size: 11px; -fx-font-weight: bold;"/>
+                    <Label fx:id="lblTotalAuctions" text="0 phiên"
+                           style="-fx-text-fill: #f0c040; -fx-font-size: 18px; -fx-font-weight: bold;"/>
+                </VBox>
+                <VBox alignment="CENTER" prefWidth="240"
+                      style="-fx-background-color: #1a1a2e; -fx-background-radius: 12; -fx-padding: 15;">
+                    <Label text="💰 LƯỢT ĐẶT GIÁ" style="-fx-text-fill: #666688; -fx-font-size: 11px; -fx-font-weight: bold;"/>
+                    <Label fx:id="lblTotalBids" text="0 lượt"
+                           style="-fx-text-fill: #f08040; -fx-font-size: 18px; -fx-font-weight: bold;"/>
+                </VBox>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Button text="🔄 Làm mới" onAction="#handleRefresh"
+                        prefHeight="40" prefWidth="100"
+                        style="-fx-background-color: #2a2a4a; -fx-text-fill: #aaaacc; -fx-background-radius: 8; -fx-cursor: hand;"/>
+            </HBox>
+
+            <!-- 2 cột: Users và Items -->
+            <HBox spacing="12" VBox.vgrow="ALWAYS">
+
+                <!-- Cột trái: Quản lý Users -->
+                <VBox prefWidth="500" HBox.hgrow="ALWAYS" spacing="10"
+                      style="-fx-background-color: #1a1a2e; -fx-background-radius: 12; -fx-padding: 18;">
+                    <Label text="👥 QUẢN LÝ NGƯỜI DÙNG"
+                           style="-fx-text-fill: #4ab0f0; -fx-font-size: 14px; -fx-font-weight: bold;"/>
+
+                    <HBox spacing="8">
+                        <TextField fx:id="txtSearchUser" promptText="Tìm tên người dùng..."
+                                   prefHeight="36" HBox.hgrow="ALWAYS"
+                                   style="-fx-background-color: #12122a; -fx-text-fill: white; -fx-prompt-text-fill: #555577; -fx-border-color: #333355; -fx-border-radius: 8; -fx-background-radius: 8; -fx-padding: 0 10 0 10;"/>
+                        <Button text="🔍 Tìm" onAction="#handleSearchUser"
+                                prefHeight="36" prefWidth="70"
+                                style="-fx-background-color: #2a3a5a; -fx-text-fill: #4ab0f0; -fx-background-radius: 8; -fx-cursor: hand;"/>
+                    </HBox>
+
+                    <ListView fx:id="listUsers" VBox.vgrow="ALWAYS"
+                              style="-fx-background-color: #12122a; -fx-control-inner-background: #12122a; -fx-background-radius: 10; -fx-border-color: #222244; -fx-border-radius: 10; -fx-font-size: 12px; -fx-text-fill: #ccccee;"/>
+
+                    <Label fx:id="lblUserDetail" text=""
+                           style="-fx-text-fill: #888899; -fx-font-size: 12px;" wrapText="true"/>
+
+                    <Button text="🗑 Xóa người dùng đã chọn" onAction="#handleDeleteUser"
+                            prefHeight="38" maxWidth="Infinity"
+                            style="-fx-background-color: #3a1a1a; -fx-text-fill: #ff7777; -fx-font-weight: bold; -fx-background-radius: 8; -fx-cursor: hand;"/>
+                </VBox>
+
+                <!-- Cột phải: Quản lý Items -->
+                <VBox prefWidth="500" HBox.hgrow="ALWAYS" spacing="10"
+                      style="-fx-background-color: #1a1a2e; -fx-background-radius: 12; -fx-padding: 18;">
+                    <Label text="🏷 QUẢN LÝ SẢN PHẨM"
+                           style="-fx-text-fill: #4af0a0; -fx-font-size: 14px; -fx-font-weight: bold;"/>
+
+                    <HBox spacing="8">
+                        <TextField fx:id="txtSearchItem" promptText="Tìm tên sản phẩm..."
+                                   prefHeight="36" HBox.hgrow="ALWAYS"
+                                   style="-fx-background-color: #12122a; -fx-text-fill: white; -fx-prompt-text-fill: #555577; -fx-border-color: #333355; -fx-border-radius: 8; -fx-background-radius: 8; -fx-padding: 0 10 0 10;"/>
+                        <Button text="🔍 Tìm" onAction="#handleSearchItem"
+                                prefHeight="36" prefWidth="70"
+                                style="-fx-background-color: #1a3a2a; -fx-text-fill: #4af0a0; -fx-background-radius: 8; -fx-cursor: hand;"/>
+                    </HBox>
+
+                    <ListView fx:id="listItems" VBox.vgrow="ALWAYS"
+                              style="-fx-background-color: #12122a; -fx-control-inner-background: #12122a; -fx-background-radius: 10; -fx-border-color: #222244; -fx-border-radius: 10; -fx-font-size: 12px; -fx-text-fill: #ccccee;"/>
+
+                    <Label fx:id="lblItemDetail" text=""
+                           style="-fx-text-fill: #888899; -fx-font-size: 12px;" wrapText="true"/>
+
+                    <HBox spacing="8">
+                        <Button text="👁 Xem chi tiết" onAction="#handleViewItemDetail"
+                                prefHeight="38" HBox.hgrow="ALWAYS"
+                                style="-fx-background-color: #1a2a3a; -fx-text-fill: #4ab0f0; -fx-font-weight: bold; -fx-background-radius: 8; -fx-cursor: hand;"/>
+                        <Button text="🗑 Xóa sản phẩm" onAction="#handleDeleteItem"
+                                prefHeight="38" HBox.hgrow="ALWAYS"
+                                style="-fx-background-color: #3a1a1a; -fx-text-fill: #ff7777; -fx-font-weight: bold; -fx-background-radius: 8; -fx-cursor: hand;"/>
+                    </HBox>
+                </VBox>
+            </HBox>
+
+            <!-- Message bar -->
+            <Label fx:id="lblMessage" text=""
+                   style="-fx-font-size: 13px; -fx-font-weight: bold;" wrapText="true"/>
+
+        </VBox>
+    </children>
+</AnchorPane>
+
+

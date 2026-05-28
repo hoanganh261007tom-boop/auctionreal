@@ -8,6 +8,21 @@ import java.sql.SQLException;
 public class UserDAO {
 
     // ─────────────────────────────────────────────────────────────────────────
+    // Inner class chứa thông tin đăng nhập đầy đủ
+    // ─────────────────────────────────────────────────────────────────────────
+    public static class LoginResult {
+        public final int    id;
+        public final String role;
+        public final double balance;
+
+        public LoginResult(int id, String role, double balance) {
+            this.id      = id;
+            this.role    = role;
+            this.balance = balance;
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
     // 1. Đăng ký người dùng mới
     // ─────────────────────────────────────────────────────────────────────────
     public int registerUser(String username, String password, String role) {
@@ -45,7 +60,16 @@ public class UserDAO {
     // 3. Đăng nhập – trả về ROLE ("BIDDER" / "SELLER") hoặc null nếu sai
     // ─────────────────────────────────────────────────────────────────────────
     public String getRoleByLogin(String username, String password) {
-        String sql = "SELECT role FROM users WHERE username = ? AND password = ?";
+        LoginResult result = getUserByLogin(username, password);
+        return result != null ? result.role : null;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // 4. Đăng nhập đầy đủ – trả về LoginResult (id + role + balance) hoặc null
+    // ─────────────────────────────────────────────────────────────────────────
+    public LoginResult getUserByLogin(String username, String password) {
+        // Thử lấy cả balance nếu có cột đó, ngược lại fallback về 0
+        String sql = "SELECT id, role FROM users WHERE username = ? AND password = ?";
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -55,11 +79,16 @@ public class UserDAO {
 
             ResultSet rs = pstmt.executeQuery();
             if (rs.next()) {
-                return rs.getString("role"); // "BIDDER" hoặc "SELLER"
+                int    id      = rs.getInt("id");
+                String role    = rs.getString("role");
+                double balance = 0.0;
+                // Thử đọc cột balance nếu tồn tại trong bảng
+                try { balance = rs.getDouble("balance"); } catch (SQLException ignored) {}
+                return new LoginResult(id, role, balance);
             }
         } catch (SQLException e) {
-            System.err.println("[UserDAO] getRoleByLogin thất bại: " + e.getMessage());
+            System.err.println("[UserDAO] getUserByLogin thất bại: " + e.getMessage());
         }
-        return null; // Sai tài khoản / mật khẩu
+        return null;
     }
 }

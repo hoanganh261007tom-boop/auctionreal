@@ -42,22 +42,23 @@ public class HelloController {
 
         // --- Kiểm tra với Database ---
         UserDAO dao = new UserDAO();
-        String role = dao.getRoleByLogin(username, password); // lấy role từ DB
+        UserDAO.LoginResult result = dao.getUserByLogin(username, password); // lấy id + role + balance từ DB
 
-        if (role == null) {
+        if (result == null) {
             showMessage("❌ Sai tài khoản hoặc mật khẩu. Vui lòng thử lại.", false);
             return;
         }
 
         showMessage("✅ Đăng nhập thành công! Đang chuyển hướng...", true);
 
-        // --- Gán currentUser dựa vào role ---
-        if ("SELLER".equalsIgnoreCase(role)) {
-            RegisterController.currentUser = new Seller("0", username, password, "Seller");
+        // --- Gán currentUser với ID thực từ DB ---
+        if ("SELLER".equalsIgnoreCase(result.role)) {
+            RegisterController.currentUser = new Seller(result.id, username, password);
             navigateTo(event, "seller-dashboard.fxml", "🏪 Seller Dashboard", 1000, 700);
         } else {
             // Mặc định BIDDER hoặc bất kỳ role nào khác
-            RegisterController.currentUser = new Bidder("0", username, password, 50_000_000.0);
+            double balance = result.balance > 0 ? result.balance : 50_000_000.0;
+            RegisterController.currentUser = new Bidder(result.id, username, password, balance);
             navigateTo(event, "bidder-dashboard.fxml", "🔍 Bidder Dashboard", 1000, 700);
         }
     }
