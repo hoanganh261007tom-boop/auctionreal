@@ -335,12 +335,13 @@ public class SellerDashboardController {
 
     @FXML
     void handleBack(ActionEvent event) throws IOException {
-        Parent root = FXMLLoader.load(getClass().getResource("role-selection.fxml"));
+        RegisterController.currentUser = null;
+        Parent root = FXMLLoader.load(getClass().getResource("hello-view.fxml"));
         Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
         stage.setMaximized(false);
-        stage.setScene(new Scene(root, 600, 400));
-        stage.setMinWidth(600); stage.setMinHeight(400);
-        stage.setTitle("Lựa chọn vai trò");
+        stage.setScene(new Scene(root, 500, 450));
+        stage.setMinWidth(500); stage.setMinHeight(450);
+        stage.setTitle("Đăng nhập");
         stage.show();
     }
 

@@ -160,10 +160,25 @@ public class BidderDashboardController {
 
     @FXML
     void handleMyBids(ActionEvent event) {
+        User user = RegisterController.currentUser;
+        if (user == null) return;
+        
+        database.dao.BidDAO bidDAO = new database.dao.BidDAO();
+        List<String> history = bidDAO.getBidHistoryByBidder(user.getId());
+        
         Alert info = new Alert(Alert.AlertType.INFORMATION);
         info.setTitle("Lịch sử đặt giá");
-        info.setHeaderText("📋 Lịch sử đặt giá của bạn");
-        info.setContentText("Tính năng này sẽ hiển thị toàn bộ lịch sử đặt giá của bạn.");
+        
+        if (history.isEmpty()) {
+            info.setHeaderText("📋 Lịch sử đặt giá của bạn");
+            info.setContentText("Bạn chưa đặt giá cho sản phẩm nào.");
+        } else {
+            info.setHeaderText("📋 Lịch sử đặt giá của bạn (" + history.size() + " lượt)");
+            ListView<String> listView = new ListView<>();
+            listView.getItems().addAll(history);
+            listView.setPrefSize(450, 300);
+            info.getDialogPane().setContent(listView);
+        }
         info.showAndWait();
     }
 
@@ -183,13 +198,13 @@ public class BidderDashboardController {
 
     @FXML
     void handleBack(ActionEvent event) throws IOException {
-        Parent root = FXMLLoader.load(getClass().getResource("role-selection.fxml"));
+        RegisterController.currentUser = null;
+        Parent root = FXMLLoader.load(getClass().getResource("hello-view.fxml"));
         Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
         stage.setMaximized(false);
-        stage.setScene(new Scene(root, 600, 400));
-        stage.setMinWidth(600);
-        stage.setMinHeight(400);
-        stage.setTitle("Lựa chọn vai trò");
+        stage.setScene(new Scene(root, 500, 450));
+        stage.setMinWidth(500); stage.setMinHeight(450);
+        stage.setTitle("Đăng nhập");
         stage.show();
     }
 

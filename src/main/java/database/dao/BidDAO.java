@@ -171,4 +171,37 @@ public class BidDAO {
         }
         return history;
     }
+
+    // =====================================================
+    // GET BID HISTORY BY BIDDER
+    // =====================================================
+    public List<String> getBidHistoryByBidder(int bidderId) {
+        List<String> history = new ArrayList<>();
+        String sql = "SELECT items.name, bids.bid_amount, bids.bid_time, auctions.status " +
+                "FROM bids " +
+                "JOIN auctions ON bids.auction_id = auctions.auction_id " +
+                "JOIN items ON auctions.item_id = items.item_id " +
+                "WHERE bids.bidder_id = ? " +
+                "ORDER BY bids.bid_time DESC";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, bidderId);
+            ResultSet rs = pstmt.executeQuery();
+            java.text.NumberFormat fmt =
+                    java.text.NumberFormat.getNumberInstance(new java.util.Locale("vi", "VN"));
+            java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("dd/MM/yyyy HH:mm");
+            while (rs.next()) {
+                String itemName = rs.getString("name");
+                double amount = rs.getDouble("bid_amount");
+                java.sql.Timestamp time = rs.getTimestamp("bid_time");
+                String status = rs.getString("status");
+                String timeStr = time != null ? sdf.format(time) : "";
+                history.add(String.format("🏷 %s | 💰 %s ₫ | 🕒 %s | 📌 %s", 
+                        itemName, fmt.format((long)amount), timeStr, status));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return history;
+    }
 }

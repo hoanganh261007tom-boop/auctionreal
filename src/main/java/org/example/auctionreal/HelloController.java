@@ -1,6 +1,7 @@
 package org.example.auctionreal;
 
 import database.UserDAO;
+import user.Admin;
 import user.Bidder;
 import user.Seller;
 import javafx.event.ActionEvent;
@@ -19,33 +20,29 @@ import java.io.IOException;
 
 /**
  * HelloController – Xử lý màn hình Đăng nhập (hello-view.fxml).
- * Dùng UserDAO để kiểm tra tài khoản trong MySQL.
+ * Luồng đăng nhập:
+ *   ADMIN  → admin-dashboard.fxml
+ *   SELLER → seller-dashboard.fxml
+ *   BIDDER → bidder-dashboard.fxml
  */
 public class HelloController {
 
-    @FXML
-    private TextField txtUsername;
-    @FXML
-    private PasswordField txtPassword;
-    @FXML
-    private Label lblMessage;
-
-    // ===== XỬ LÝ SỰ KIỆN =====
+    @FXML private TextField     txtUsername;
+    @FXML private PasswordField txtPassword;
+    @FXML private Label         lblMessage;
 
     @FXML
     protected void onLoginButtonClick(ActionEvent event) {
         String username = txtUsername.getText().trim();
         String password = txtPassword.getText();
 
-        // --- Validate cơ bản ---
         if (username.isEmpty() || password.isEmpty()) {
             showMessage("⚠ Vui lòng nhập tên đăng nhập và mật khẩu!", false);
             return;
         }
 
-        // --- Kiểm tra với Database ---
         UserDAO dao = new UserDAO();
-        UserDAO.LoginResult result = dao.getUserByLogin(username, password); // lấy id + role + balance từ DB
+        UserDAO.LoginResult result = dao.getUserByLogin(username, password);
 
         if (result == null) {
             showMessage("❌ Sai tài khoản hoặc mật khẩu. Vui lòng thử lại.", false);
@@ -54,28 +51,37 @@ public class HelloController {
 
         showMessage("✅ Đăng nhập thành công! Đang chuyển hướng...", true);
 
-        // --- Gán currentUser với ID thực từ DB ---
-        if ("SELLER".equalsIgnoreCase(result.role)) {
-            RegisterController.currentUser = new Seller(result.id, username, password);
-            navigateTo(event, "seller-dashboard.fxml", "🏪 Seller Dashboard", 1000, 700);
-        } else {
-            // Mặc định BIDDER hoặc bất kỳ role nào khác
-            double balance = result.balance > 0 ? result.balance : 50_000_000.0;
-            RegisterController.currentUser = new Bidder(result.id, username, password, balance);
-            navigateTo(event, "bidder-dashboard.fxml", "🔍 Bidder Dashboard", 1000, 700);
+        // ── Phân luồng theo role từ DB ──
+        String role = result.role != null ? result.role.toUpperCase() : "BIDDER";
+
+        switch (role) {
+            case "ADMIN":
+                RegisterController.currentUser = new Admin(result.id, username, password);
+                navigateTo(event, "admin-dashboard.fxml", "🛡 Admin Panel", 1100, 700);
+                break;
+
+            case "SELLER":
+                RegisterController.currentUser = new Seller(result.id, username, password);
+                navigateTo(event, "seller-dashboard.fxml", "🏪 Seller Dashboard", 1200, 800);
+                break;
+
+            default: // BIDDER hoặc bất kỳ role nào khác
+                double balance = result.balance > 0 ? result.balance : 50_000_000.0;
+                RegisterController.currentUser = new Bidder(result.id, username, password, balance);
+                navigateTo(event, "bidder-dashboard.fxml", "🔍 Bidder Dashboard", 1200, 800);
+                break;
         }
     }
 
-    /** Chuyển sang màn hình đăng ký. */
     @FXML
     protected void onGoToRegister(ActionEvent event) {
-        navigateTo(event, "register.fxml", "Đăng ký tài khoản", 600, 450);
+        navigateTo(event, "register.fxml", "Đăng ký tài khoản", 500, 680);
     }
 
-    // ===== TIỆN ÍCH PRIVATE =====
+    // ── Tiện ích ──
 
     private void navigateTo(ActionEvent event, String fxmlFile, String title,
-            double width, double height) {
+                             double width, double height) {
         try {
             java.net.URL fxmlUrl = getClass().getResource(fxmlFile);
             if (fxmlUrl == null) {
@@ -84,13 +90,12 @@ public class HelloController {
                         "Kiểm tra lại tên file trong thư mục resources.");
                 return;
             }
-            Parent root = FXMLLoader.load(fxmlUrl);
-            Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
+            Parent root  = FXMLLoader.load(fxmlUrl);
+            Stage  stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
             stage.setScene(new Scene(root, width, height));
             stage.setTitle(title);
             stage.setResizable(true);
-            if (width >= 900)
-                stage.setMaximized(true);
+            if (width >= 900) stage.setMaximized(true);
             stage.show();
         } catch (IOException e) {
             System.err.println("Lỗi chuyển màn hình: " + e.getMessage());

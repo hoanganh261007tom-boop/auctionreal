@@ -23,7 +23,23 @@ public class UserDAO {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // 1. Đăng ký người dùng mới
+    // 1. Kiểm tra username đã tồn tại chưa
+    // ─────────────────────────────────────────────────────────────────────────
+    public boolean isUsernameTaken(String username) {
+        String sql = "SELECT COUNT(*) FROM users WHERE username = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, username);
+            ResultSet rs = pstmt.executeQuery();
+            if (rs.next()) return rs.getInt(1) > 0;
+        } catch (SQLException e) {
+            System.err.println("[UserDAO] isUsernameTaken thất bại: " + e.getMessage());
+        }
+        return false;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // 2. Đăng ký người dùng mới
     // ─────────────────────────────────────────────────────────────────────────
     public int registerUser(String username, String password, String role) {
         String sql = "INSERT INTO users (username, password, role) VALUES (?, ?, ?)";
