@@ -102,17 +102,15 @@ public class BidderDashboardController {
 
     @FXML
     void handleItemSelected(javafx.scene.input.MouseEvent event) {
-        int idx = listAuctionItems.getSelectionModel().getSelectedIndex();
-        if (idx < 0 || idx >= auctionItems.size()) return;
-        updateDetailPanel(auctionItems.get(idx));
+        AuctionItemInfo item = getSelectedItem();
+        if (item == null) return;
+        updateDetailPanel(item);
     }
 
     @FXML
     void handleJoinAuction(ActionEvent event) {
-        int idx = listAuctionItems.getSelectionModel().getSelectedIndex();
-        if (idx < 0 || idx >= auctionItems.size()) return;
-
-        AuctionItemInfo item = auctionItems.get(idx);
+        AuctionItemInfo item = getSelectedItem();
+        if (item == null) return;
 
         // ---- Truyền đầy đủ dữ liệu vào AuctionController ----
         AuctionController.selectedName        = item.name;
@@ -145,10 +143,10 @@ public class BidderDashboardController {
         User user = RegisterController.currentUser;
         if (user == null) return;
 
-        int idx = listAuctionItems.getSelectionModel().getSelectedIndex();
-        if (idx < 0 || idx >= auctionItems.size()) return;
+        AuctionItemInfo selected = getSelectedItem();
+        if (selected == null) return;
 
-        int auctionId = auctionItems.get(idx).auctionId;
+        int auctionId = selected.auctionId;
         if (auctionId == -1) {
             btnWatchlist.setText("❌ Chưa có phiên đấu giá");
             return;
@@ -234,6 +232,18 @@ public class BidderDashboardController {
         }
         int totalPages = Math.max(1, (int) Math.ceil((double) auctionItems.size() / PAGE_SIZE));
         lblPage.setText("Trang " + currentPage + " / " + totalPages);
+    }
+
+    /**
+     * Trả về item đang được chọn trong ListView, có tính đến page offset.
+     * Trang 2 item thứ 0 trong list → auctionItems.get(PAGE_SIZE + 0)
+     */
+    private AuctionItemInfo getSelectedItem() {
+        int listIdx = listAuctionItems.getSelectionModel().getSelectedIndex();
+        if (listIdx < 0) return null;
+        int realIdx = (currentPage - 1) * PAGE_SIZE + listIdx;
+        if (realIdx < 0 || realIdx >= auctionItems.size()) return null;
+        return auctionItems.get(realIdx);
     }
 
     private void refreshStats() {
