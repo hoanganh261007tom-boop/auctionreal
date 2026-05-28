@@ -20,6 +20,8 @@ import java.net.Socket;
  * Server → Client:
  *   BID_UPDATE:<auctionId>:<currentPrice>:<topBidder>:<bidCount>
  *   AUCTION_CLOSED:<auctionId>:<winner>
+ *   TIME_SYNC:<auctionId>:<remainingSeconds>       ★ Đồng bộ đồng hồ
+ *   ANTI_SNIPE:<auctionId>:<extraSeconds>           ★ Thông báo gia hạn
  *   USER_JOINED:<auctionId>:<username>
  *   USER_LEFT:<auctionId>:<username>
  *   PONG
@@ -125,6 +127,13 @@ public class ClientHandler implements Runnable {
         double currentBid = bidDAO.getCurrentBid(watchingAuctionId);
         String topBidder = bidDAO.getWinner(watchingAuctionId);
         sendMessage("BID_UPDATE:" + watchingAuctionId + ":" + currentBid + ":" + topBidder + ":0");
+
+        // ★ GỬI TIME_SYNC ngay lập tức để client có đúng thời gian còn lại
+        AuctionDAO auctionDAO = new AuctionDAO();
+        int remaining = auctionDAO.getRemainingSeconds(watchingAuctionId);
+        sendMessage("TIME_SYNC:" + watchingAuctionId + ":" + remaining);
+        System.out.println("[ClientHandler] ⏱ Gửi TIME_SYNC cho " + username
+                + ": " + remaining + " giây còn lại.");
     }
 
     // ─────────────────────────────
@@ -162,6 +171,22 @@ public class ClientHandler implements Runnable {
             String topBidder = bidDAO.getWinner(auctionId);
             server.broadcastToAuction(auctionId,
                     "BID_UPDATE:" + auctionId + ":" + amount + ":" + topBidder + ":1");
+
+            // ★ ANTI-SNIPING phía server: nếu bid trong 30 giây cuối → gia hạn
+            AuctionDAO auctionDAO = new AuctionDAO();
+            int remaining = auctionDAO.getRemainingSeconds(auctionId);
+            if (remaining > 0 && remaining <= 30) {
+                boolean extended = auctionDAO.extendEndTime(auctionId, 60);
+                if (extended) {
+                    int newRemaining = auctionDAO.getRemainingSeconds(auctionId);
+                    server.broadcastToAuction(auctionId,
+                            "TIME_SYNC:" + auctionId + ":" + newRemaining);
+                    server.broadcastToAuction(auctionId,
+                            "ANTI_SNIPE:" + auctionId + ":60");
+                    System.out.println("[ClientHandler] ⏱ Anti-sniping: phiên #"
+                            + auctionId + " gia hạn +60s. Còn lại: " + newRemaining + "s");
+                }
+            }
 
         } else {
             sendMessage("ERROR:Đặt giá thất bại! Giá phải cao hơn giá hiện tại.");

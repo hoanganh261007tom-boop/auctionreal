@@ -1,15 +1,24 @@
 package org.example.auctionreal.network;
 
+import database.dao.AuctionDAO;
+
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  * AuctionServer: TCP Server cho hệ thống đấu giá real-time.
  * Lắng nghe kết nối từ các client (JavaFX app) và broadcast
  * các sự kiện đấu giá (bid, close, join) tới tất cả client.
+ *
+ * ĐẶC BIỆT: Broadcast TIME_SYNC mỗi giây để đồng bộ đồng hồ
+ * đếm ngược giữa tất cả client. Thời gian được lấy từ end_time
+ * trong database → tất cả client luôn hiển thị cùng một thời gian.
  */
 public class AuctionServer {
 
@@ -20,6 +29,9 @@ public class AuctionServer {
 
     /** Danh sách tất cả client đang kết nối (thread-safe). */
     private final List<ClientHandler> clients = new CopyOnWriteArrayList<>();
+
+    /** Scheduler để broadcast TIME_SYNC định kỳ. */
+    private ScheduledExecutorService timeSyncScheduler;
 
     public AuctionServer(int port) {
         this.port = port;
@@ -41,6 +53,9 @@ public class AuctionServer {
                 serverSocket = new ServerSocket(port);
                 running = true;
                 System.out.println("[AuctionServer] ✅ Đang lắng nghe trên port " + port + "...");
+
+                // Khởi động TIME_SYNC scheduler
+                startTimeSyncBroadcast();
 
                 while (running) {
                     try {
@@ -71,11 +86,16 @@ public class AuctionServer {
     }
 
     /**
-     * Dừng server: đóng tất cả client, đóng ServerSocket.
+     * Dừng server: đóng tất cả client, đóng ServerSocket, dừng scheduler.
      */
     public void stop() {
         running = false;
         System.out.println("[AuctionServer] 🛑 Đang tắt server...");
+
+        // Dừng TIME_SYNC scheduler
+        if (timeSyncScheduler != null && !timeSyncScheduler.isShutdown()) {
+            timeSyncScheduler.shutdownNow();
+        }
 
         // Đóng tất cả client handler
         for (ClientHandler client : clients) {
@@ -93,6 +113,60 @@ public class AuctionServer {
         }
 
         System.out.println("[AuctionServer] ✅ Server đã tắt.");
+    }
+
+    // =====================================================
+    // TIME SYNC – Đồng bộ đồng hồ đếm ngược
+    // =====================================================
+
+    /**
+     * Khởi động scheduler broadcast TIME_SYNC mỗi giây.
+     * Lấy remaining seconds từ DB (end_time) và gửi cho tất cả client.
+     */
+    private void startTimeSyncBroadcast() {
+        timeSyncScheduler = Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread t = new Thread(r, "TimeSyncBroadcaster");
+            t.setDaemon(true);
+            return t;
+        });
+
+        timeSyncScheduler.scheduleAtFixedRate(() -> {
+            try {
+                if (clients.isEmpty()) return;
+
+                // Tìm tất cả auctionId đang được theo dõi
+                Set<Integer> activeAuctionIds = new HashSet<>();
+                for (ClientHandler client : clients) {
+                    int aid = client.getWatchingAuctionId();
+                    if (aid > 0) activeAuctionIds.add(aid);
+                }
+
+                if (activeAuctionIds.isEmpty()) return;
+
+                // Query remaining seconds cho mỗi auction và broadcast
+                AuctionDAO auctionDAO = new AuctionDAO();
+                for (int auctionId : activeAuctionIds) {
+                    int remaining = auctionDAO.getRemainingSeconds(auctionId);
+                    broadcastToAuction(auctionId,
+                            "TIME_SYNC:" + auctionId + ":" + remaining);
+
+                    // Nếu hết giờ → đóng phiên tự động
+                    if (remaining <= 0) {
+                        auctionDAO.closeAuction(auctionId);
+                        database.dao.BidDAO bidDAO = new database.dao.BidDAO();
+                        String winner = bidDAO.getWinner(auctionId);
+                        broadcastToAuction(auctionId,
+                                "AUCTION_CLOSED:" + auctionId + ":" + winner);
+                        System.out.println("[AuctionServer] ⏰ Phiên #" + auctionId
+                                + " hết giờ → đóng. Winner: " + winner);
+                    }
+                }
+            } catch (Exception e) {
+                System.err.println("[AuctionServer] Lỗi TIME_SYNC: " + e.getMessage());
+            }
+        }, 0, 1, TimeUnit.SECONDS);
+
+        System.out.println("[AuctionServer] ⏱ TIME_SYNC broadcaster đã khởi động (mỗi 1 giây).");
     }
 
     // =====================================================
