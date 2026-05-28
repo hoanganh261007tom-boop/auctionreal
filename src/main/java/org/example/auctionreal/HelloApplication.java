@@ -10,13 +10,13 @@ import java.io.IOException;
 public class HelloApplication extends Application {
     @Override
     public void start(Stage stage) throws IOException {
-        FXMLLoader fxmlLoader = new FXMLLoader(HelloApplication.class.getResource("register.fxml"));
-        Scene scene = new Scene(fxmlLoader.load(), 1200, 800);
-        stage.setTitle("Hệ thống đấu giá - Đăng ký");
+        FXMLLoader fxmlLoader = new FXMLLoader(HelloApplication.class.getResource("hello-view.fxml"));
+        Scene scene = new Scene(fxmlLoader.load(), 600, 500);
+        stage.setTitle("Hệ thống đấu giá - Đăng nhập");
         stage.setScene(scene);
         stage.setResizable(true);
-        stage.setMinWidth(1200);
-        stage.setMinHeight(800);
+        stage.setMinWidth(500);
+        stage.setMinHeight(450);
         stage.show();
     }
 

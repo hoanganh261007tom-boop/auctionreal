@@ -3,56 +3,61 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.text.*?>
+<?import javafx.geometry.Insets?>
 
 <!--
-  AnchorPane: Là cái "khung tranh" chính của cửa sổ.
-  fx:controller: Liên kết tệp thiết kế này với tệp xử lý RegisterController.java.
-  Bản chất: Nói cho JavaFX biết "Bộ não" điều khiển màn hình này nằm ở đâu.
+  StackPane thay vì AnchorPane để tự động căn giữa nội dung khi resize.
 -->
-<AnchorPane prefHeight="400.0" prefWidth="600.0"
-            style="-fx-background-color: #0f0f1a;"
-            xmlns="http://javafx.com/javafx/21"
-            xmlns:fx="http://javafx.com/fxml/1"
-            fx:controller="org.example.auctionreal.RegisterController">
-    <children>
-        <!--
-          VBox: Sắp xếp các linh kiện (Label, TextField, Button) theo hàng dọc từ trên xuống.
-          spacing="15.0": Tạo khoảng cách 15 pixel giữa các linh kiện để giao diện thoáng đãng.
-        -->
-        <VBox alignment="CENTER" layoutX="175.0" layoutY="60.0" prefWidth="250.0" spacing="15.0">
-            <children>
-                <!-- Tiêu đề của màn hình -->
-                <Label text="ĐĂNG KÝ HỆ THỐNG">
-                    <font>
-                        <Font name="System Bold" size="20.0" />
-                    </font>
-                </Label>
+<StackPane style="-fx-background-color: linear-gradient(to bottom right, #0f0f1a, #1a1a2e, #16213e);"
+           xmlns="http://javafx.com/javafx/21"
+           xmlns:fx="http://javafx.com/fxml/1"
+           fx:controller="org.example.auctionreal.RegisterController">
 
-                <!--
-                   TextField: Ô nhập văn bản bình thường.
-                   fx:id: Định danh để bên Java có thể gọi ra (phải khớp 100% với biến trong Controller).
-                   promptText: Dòng chữ mờ gợi ý cho người dùng biết cần nhập gì.
-                -->
-                <TextField fx:id="txtId" promptText="Nhập ID (ví dụ: U001)" />
+    <VBox alignment="CENTER" spacing="18.0" maxWidth="320.0">
+        <padding>
+            <Insets bottom="40.0" left="40.0" right="40.0" top="40.0"/>
+        </padding>
+        <children>
+            <!-- Icon -->
+            <Label text="📝" style="-fx-font-size: 42px;"/>
 
-                <TextField fx:id="txtUsername" promptText="Nhập Tên người dùng" />
+            <!-- Tiêu đề của màn hình -->
+            <Label text="ĐĂNG KÝ HỆ THỐNG"
+                   style="-fx-text-fill: #e0e0ff; -fx-font-size: 22px; -fx-font-weight: bold;"/>
 
-                <!--
-                   PasswordField: Ô nhập mật khẩu đặc biệt.
-                   Bản chất: Tự động biến các chữ thành dấu chấm tròn để bảo mật.
-                -->
-                <PasswordField fx:id="txtPassword" promptText="Mật khẩu (ít nhất 4 ký tự)" />
+            <Label text="Tạo tài khoản mới để bắt đầu."
+                   style="-fx-text-fill: #8888aa; -fx-font-size: 13px;"/>
 
-                <!--
-                   Button: Nút bấm để thực hiện hành động.
-                   onAction: Khi nhấn nút, Java sẽ tìm đến hàm có tên sau dấu # (#handleRegister).
-                -->
-                <Button mnemonicParsing="false" onAction="#handleRegister"
-                        prefWidth="150.0"
-                        style="-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand;"
-                        text="Tiếp theo" />
+            <Region prefHeight="5.0"/>
 
-            </children>
-        </VBox>
-    </children>
-</AnchorPane>
+            <TextField fx:id="txtId" promptText="Nhập ID (ví dụ: U001)"
+                       maxWidth="300.0"
+                       style="-fx-background-color: #1e1e30; -fx-text-fill: #e0e0e0; -fx-prompt-text-fill: #666688; -fx-border-color: #333355; -fx-border-radius: 8; -fx-background-radius: 8; -fx-padding: 10 14; -fx-font-size: 14px;"/>
+
+            <TextField fx:id="txtUsername" promptText="Nhập Tên người dùng"
+                       maxWidth="300.0"
+                       style="-fx-background-color: #1e1e30; -fx-text-fill: #e0e0e0; -fx-prompt-text-fill: #666688; -fx-border-color: #333355; -fx-border-radius: 8; -fx-background-radius: 8; -fx-padding: 10 14; -fx-font-size: 14px;"/>
+
+            <PasswordField fx:id="txtPassword" promptText="Mật khẩu (ít nhất 4 ký tự)"
+                           maxWidth="300.0"
+                           style="-fx-background-color: #1e1e30; -fx-text-fill: #e0e0e0; -fx-prompt-text-fill: #666688; -fx-border-color: #333355; -fx-border-radius: 8; -fx-background-radius: 8; -fx-padding: 10 14; -fx-font-size: 14px;"/>
+
+            <Button mnemonicParsing="false" onAction="#handleRegister"
+                    prefWidth="300.0" prefHeight="40.0"
+                    style="-fx-background-color: linear-gradient(to right, #43a047, #66bb6a); -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 15px; -fx-background-radius: 8; -fx-cursor: hand;"
+                    text="Tiếp theo" />
+
+            <Region prefHeight="3.0"/>
+
+            <HBox alignment="CENTER" spacing="5.0">
+                <children>
+                    <Label text="Đã có tài khoản?"
+                           style="-fx-text-fill: #8888aa; -fx-font-size: 13px;"/>
+                    <Hyperlink text="Đăng nhập" onAction="#handleGoToLogin"
+                               style="-fx-text-fill: #6366f1; -fx-font-size: 13px; -fx-border-color: transparent;"/>
+                </children>
+            </HBox>
+
+        </children>
+    </VBox>
+</StackPane>

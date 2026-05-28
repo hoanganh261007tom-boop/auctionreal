@@ -23,9 +23,12 @@ import java.io.IOException;
  */
 public class HelloController {
 
-    @FXML private TextField     txtUsername;
-    @FXML private PasswordField txtPassword;
-    @FXML private Label         lblMessage;
+    @FXML
+    private TextField txtUsername;
+    @FXML
+    private PasswordField txtPassword;
+    @FXML
+    private Label lblMessage;
 
     // ===== XỬ LÝ SỰ KIỆN =====
 
@@ -72,7 +75,7 @@ public class HelloController {
     // ===== TIỆN ÍCH PRIVATE =====
 
     private void navigateTo(ActionEvent event, String fxmlFile, String title,
-                             double width, double height) {
+            double width, double height) {
         try {
             java.net.URL fxmlUrl = getClass().getResource(fxmlFile);
             if (fxmlUrl == null) {
@@ -86,7 +89,8 @@ public class HelloController {
             stage.setScene(new Scene(root, width, height));
             stage.setTitle(title);
             stage.setResizable(true);
-            if (width >= 900) stage.setMaximized(true);
+            if (width >= 900)
+                stage.setMaximized(true);
             stage.show();
         } catch (IOException e) {
             System.err.println("Lỗi chuyển màn hình: " + e.getMessage());

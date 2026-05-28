@@ -95,4 +95,21 @@ public class RegisterController {
         stage.setTitle("Lựa chọn vai trò người dùng");
         stage.show();
     }
+
+    /** Chuyển sang màn hình đăng nhập. */
+    @FXML
+    void handleGoToLogin(ActionEvent event) {
+        try {
+            Parent root = FXMLLoader.load(
+                    getClass().getResource("/org/example/auctionreal/hello-view.fxml"));
+            Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
+            stage.setScene(new Scene(root, 600, 500));
+            stage.setTitle("Hệ thống đấu giá - Đăng nhập");
+            stage.show();
+        } catch (IOException e) {
+            System.err.println("Lỗi chuyển màn hình: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
 }
+

@@ -10,7 +10,7 @@ module org.example.auctionreal {
     opens org.example.auctionreal to javafx.fxml;
     opens database to javafx.fxml;
     opens user to javafx.fxml;
-    opens model to javafx.fxml;
+    opens database.model to javafx.fxml;
 
     // ── Export để các package khác dùng được ────────────────────────────────
     exports org.example.auctionreal;

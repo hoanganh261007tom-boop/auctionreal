@@ -174,6 +174,45 @@ public class ItemDAO {
     }
 
     /**
+     * Xóa vật phẩm theo item_id, bao gồm cả bids và auctions liên quan.
+     * Xóa theo thứ tự: bids → auctions → items để tránh lỗi foreign key.
+     */
+    public boolean deleteItem(int itemId) {
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                // 1. Xóa bids liên quan đến auctions của item
+                PreparedStatement ps1 = conn.prepareStatement(
+                        "DELETE FROM bids WHERE auction_id IN " +
+                                "(SELECT auction_id FROM auctions WHERE item_id = ?)");
+                ps1.setInt(1, itemId);
+                ps1.executeUpdate();
+
+                // 2. Xóa auctions của item
+                PreparedStatement ps2 = conn.prepareStatement(
+                        "DELETE FROM auctions WHERE item_id = ?");
+                ps2.setInt(1, itemId);
+                ps2.executeUpdate();
+
+                // 3. Xóa item
+                PreparedStatement ps3 = conn.prepareStatement(
+                        "DELETE FROM items WHERE item_id = ?");
+                ps3.setInt(1, itemId);
+                int rows = ps3.executeUpdate();
+
+                conn.commit();
+                return rows > 0;
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            }
+        } catch (SQLException e) {
+            System.err.println("[ItemDAO] deleteItem thất bại: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
      * Data class chứa đầy đủ thông tin item + auction_id để BidderDashboard dùng.
      */
     public static class AuctionItemInfo {
