@@ -48,7 +48,7 @@
                         <HBox alignment="CENTER_LEFT" spacing="10">
                             <children>
                                 <Label text="🏷" style="-fx-font-size: 20px;"/>
-                                <Label text="ĐĂNG VẬT PHẨM ĐẤU GIÁ"
+                                <Label fx:id="lblFormTitle" text="ĐĂNG VẬT PHẨM ĐẤU GIÁ"
                                        style="-fx-text-fill: #f0c040; -fx-font-size: 16px; -fx-font-weight: bold;"/>
                             </children>
                         </HBox>
@@ -173,7 +173,8 @@
                                style="-fx-font-size: 13px; -fx-font-weight: bold;"/>
 
                         <!-- Nút ĐĂNG BÁN -->
-                        <Button text="🚀  ĐĂNG VẬT PHẨM LÊN SÀN ĐẤU GIÁ"
+                        <Button fx:id="btnSubmitForm"
+                                text="🚀  ĐĂNG VẬT PHẨM LÊN SÀN ĐẤU GIÁ"
                                 onAction="#handlePostItem"
                                 prefHeight="48"
                                 prefWidth="999"
@@ -271,6 +272,12 @@
                                         HBox.hgrow="ALWAYS"
                                         prefWidth="999"
                                         style="-fx-background-color: #1e2a3a; -fx-text-fill: #4ab0f0; -fx-font-size: 13px; -fx-background-radius: 8; -fx-cursor: hand;"/>
+                                <Button text="✏  Sửa sản phẩm"
+                                        onAction="#handleEditItem"
+                                        prefHeight="40"
+                                        HBox.hgrow="ALWAYS"
+                                        prefWidth="999"
+                                        style="-fx-background-color: #1a2a1a; -fx-text-fill: #4af0a0; -fx-font-size: 13px; -fx-background-radius: 8; -fx-cursor: hand;"/>
                                 <Button text="🗑  Rút vật phẩm"
                                         onAction="#handleWithdrawItem"
                                         prefHeight="40"

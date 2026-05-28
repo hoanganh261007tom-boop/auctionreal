@@ -23,6 +23,8 @@ public class SellerDashboardController {
 
     // ── Form đăng sản phẩm ──
     @FXML private Label    lblUserInfo;
+    @FXML private Label    lblFormTitle;    // tiêu đề form (thay đổi khi edit)
+    @FXML private Button   btnSubmitForm;  // nút đăng/lưu (thay đổi khi edit)
     @FXML private TextField txtItemName;
     @FXML private TextArea  txtDescription;
     @FXML private TextField txtStartPrice;
@@ -45,6 +47,9 @@ public class SellerDashboardController {
 
     /** Danh sách item từ DB của seller này */
     private List<AuctionItemInfo> myItems;
+
+    /** ID của item đang được chỉnh sửa; -1 nếu ở chế độ đăng mới */
+    private int editingItemId = -1;
 
     // =====================================================
     // INITIALIZE
@@ -97,10 +102,17 @@ public class SellerDashboardController {
     }
 
     // =====================================================
-    // ĐĂNG SẢN PHẨM MỚI
+    // ĐĂNG SẢN PHẨM MỚI  hoặc  LƯU SỬA (tuỳ editingItemId)
     // =====================================================
     @FXML
     void handlePostItem(ActionEvent event) {
+        // ── Nếu đang ở chế độ chỉnh sửa, chuyển sang lưu sửa ──
+        if (editingItemId != -1) {
+            handleSaveEdit();
+            return;
+        }
+
+        // ── Chế độ đăng mới ──
         String name       = txtItemName.getText().trim();
         String desc       = txtDescription.getText().trim();
         String priceStr   = txtStartPrice.getText().trim().replaceAll("[.,\\s]", "");
@@ -149,7 +161,7 @@ public class SellerDashboardController {
     }
 
     // =====================================================
-    // SỬA SẢN PHẨM
+    // SỬA SẢN PHẨM – Tải thông tin lên form và bật chế độ edit
     // =====================================================
     @FXML
     void handleEditItem(ActionEvent event) {
@@ -167,49 +179,75 @@ public class SellerDashboardController {
             return;
         }
 
-        // Điền thông tin vào form để sửa
+        // Kiểm tra trạng thái: chỉ cho phép sửa OPEN
+        if (!"OPEN".equals(selected.status)) {
+            showMessage("❌ Chỉ có thể sửa sản phẩm đang mở đấu giá!", false);
+            return;
+        }
+
+        // Lưu ID đang sửa và điền dữ liệu vào form
+        editingItemId = selected.itemId;
         txtItemName.setText(selected.name);
         txtDescription.setText(selected.description != null ? selected.description : "");
         txtStartPrice.setText(String.valueOf((long) selected.startPrice));
         txtMinStep.setText(String.valueOf((long) selected.minStep));
+        // txtDurationHours không thể sửa (phiên đấu giá đã bắt đầu)
+        txtDurationHours.setDisable(true);
+        txtDurationHours.setText("(không đổi)");
 
-        showMessage("✏ Đã tải thông tin sản phẩm. Sửa xong nhấn 'LƯU SỬA'.", true);
+        // Chuyển form sang chế độ chỉnh sửa
+        enterEditMode(selected.name);
+    }
 
-        // Đổi nút thành "Lưu sửa" tạm thời — dùng Alert để confirm
-        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
-        confirm.setTitle("Sửa sản phẩm");
-        confirm.setHeaderText("Sửa: " + selected.name);
-        confirm.setContentText("Nhấn OK sau khi bạn đã chỉnh sửa thông tin trong form bên trái.");
-        confirm.showAndWait().ifPresent(response -> {
-            if (response == ButtonType.OK) {
-                String newName  = txtItemName.getText().trim();
-                String newDesc  = txtDescription.getText().trim();
-                String newPrice = txtStartPrice.getText().trim().replaceAll("[.,\\s]", "");
-                String newStep  = txtMinStep.getText().trim().replaceAll("[.,\\s]", "");
+    /** Lưu thay đổi khi đang ở chế độ edit */
+    private void handleSaveEdit() {
+        String newName  = txtItemName.getText().trim();
+        String newDesc  = txtDescription.getText().trim();
+        String newPrice = txtStartPrice.getText().trim().replaceAll("[.,\\s]", "");
+        String newStep  = txtMinStep.getText().trim().replaceAll("[.,\\s]", "");
 
-                if (newName.isEmpty() || newDesc.isEmpty()
-                        || newPrice.isEmpty() || newStep.isEmpty()) {
-                    showMessage("⚠ Vui lòng điền đầy đủ thông tin!", false);
-                    return;
-                }
+        if (newName.isEmpty() || newDesc.isEmpty()
+                || newPrice.isEmpty() || newStep.isEmpty()) {
+            showMessage("⚠ Vui lòng điền đầy đủ thông tin!", false);
+            return;
+        }
 
-                try {
-                    double price = Double.parseDouble(newPrice);
-                    double step  = Double.parseDouble(newStep);
-                    ItemDAO dao  = new ItemDAO();
-                    boolean ok   = dao.updateItem(selected.itemId, newName, newDesc, price, step);
-                    if (ok) {
-                        showMessage("✅ Sửa sản phẩm thành công!", true);
-                        clearFormFields();
-                        loadMyItems();
-                    } else {
-                        showMessage("❌ Sửa thất bại!", false);
-                    }
-                } catch (NumberFormatException e) {
-                    showMessage("❌ Giá không hợp lệ!", false);
-                }
+        try {
+            double price = Double.parseDouble(newPrice);
+            double step  = Double.parseDouble(newStep);
+            ItemDAO dao  = new ItemDAO();
+            boolean ok   = dao.updateItem(editingItemId, newName, newDesc, price, step);
+            if (ok) {
+                showMessage("✅ Sửa sản phẩm thành công!", true);
+                exitEditMode();
+                loadMyItems();
+            } else {
+                showMessage("❌ Sửa thất bại! Vui lòng thử lại.", false);
             }
-        });
+        } catch (NumberFormatException e) {
+            showMessage("❌ Giá không hợp lệ!", false);
+        }
+    }
+
+    /** Bật chế độ chỉnh sửa: đổi tiêu đề + nút */
+    private void enterEditMode(String itemName) {
+        lblFormTitle.setText("CHỈNH SỬA VẬT PHẨM");
+        lblFormTitle.setStyle("-fx-text-fill: #4af0a0; -fx-font-size: 16px; -fx-font-weight: bold;");
+        btnSubmitForm.setText("💾  LƯU THAY ĐỔI");
+        btnSubmitForm.setStyle("-fx-background-color: #4af0a0; -fx-text-fill: #0f0f1a; -fx-font-weight: bold; -fx-font-size: 15px; -fx-background-radius: 10; -fx-cursor: hand;");
+        showMessage("✏ Đang sửa: " + itemName + "  |  Chỉnh sửa thông tin rồi nhấn 'LƯU THAY ĐỔI'.", true);
+    }
+
+    /** Thoát chế độ chỉnh sửa: reset tiêu đề + nút + form */
+    private void exitEditMode() {
+        editingItemId = -1;
+        txtDurationHours.setDisable(false);
+        txtDurationHours.clear();
+        lblFormTitle.setText("ĐĂNG VẬT PHẨM ĐẤU GIÁ");
+        lblFormTitle.setStyle("-fx-text-fill: #f0c040; -fx-font-size: 16px; -fx-font-weight: bold;");
+        btnSubmitForm.setText("🚀  ĐĂNG VẬT PHẨM LÊN SÀN ĐẤU GIÁ");
+        btnSubmitForm.setStyle("-fx-background-color: #f0c040; -fx-text-fill: #0f0f1a; -fx-font-weight: bold; -fx-font-size: 15px; -fx-background-radius: 10; -fx-cursor: hand;");
+        clearFormFields();
     }
 
     // =====================================================
@@ -286,7 +324,12 @@ public class SellerDashboardController {
 
     @FXML
     void handleClearForm(ActionEvent event) {
-        clearFormFields();
+        if (editingItemId != -1) {
+            // Hủy chỉnh sửa, về chế độ đăng mới
+            exitEditMode();
+        } else {
+            clearFormFields();
+        }
         lblMessage.setText("");
     }
 

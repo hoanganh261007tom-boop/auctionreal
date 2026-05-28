@@ -46,16 +46,40 @@ public class ItemDAO {
     // =====================================================
     public boolean updateItem(int itemId, String name, String description,
                               double startPrice, double minStep) {
-        String sql = "UPDATE items SET name = ?, description = ?, " +
-                "starting_price = ?, min_step = ? WHERE item_id = ?";
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setString(1, name);
-            pstmt.setString(2, description);
-            pstmt.setDouble(3, startPrice);
-            pstmt.setDouble(4, minStep);
-            pstmt.setInt(5, itemId);
-            return pstmt.executeUpdate() > 0;
+        // Cập nhật items: name, description, starting_price, current_price, min_step
+        // current_price cũng phải cập nhật vì chưa có ai đặt giá
+        String sqlItem = "UPDATE items SET name = ?, description = ?, " +
+                "starting_price = ?, current_price = ?, min_step = ? WHERE item_id = ?";
+        // Đồng bộ current_bid trong auctions (chỉ khi chưa ai đặt giá)
+        String sqlAuction = "UPDATE auctions SET current_bid = ? " +
+                "WHERE item_id = ? AND current_bid <= " +
+                "(SELECT starting_price FROM items WHERE item_id = ?)";
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                // 1. Cập nhật bảng items
+                PreparedStatement ps1 = conn.prepareStatement(sqlItem);
+                ps1.setString(1, name);
+                ps1.setString(2, description);
+                ps1.setDouble(3, startPrice);
+                ps1.setDouble(4, startPrice); // current_price = starting_price khi chưa ai đặt
+                ps1.setDouble(5, minStep);
+                ps1.setInt(6, itemId);
+                int rows = ps1.executeUpdate();
+
+                // 2. Đồng bộ current_bid trong auctions
+                PreparedStatement ps2 = conn.prepareStatement(sqlAuction);
+                ps2.setDouble(1, startPrice);
+                ps2.setInt(2, itemId);
+                ps2.setInt(3, itemId);
+                ps2.executeUpdate();
+
+                conn.commit();
+                return rows > 0;
+            } catch (SQLException e) {
+                conn.rollback();
+                e.printStackTrace();
+            }
         } catch (SQLException e) {
             e.printStackTrace();
         }
