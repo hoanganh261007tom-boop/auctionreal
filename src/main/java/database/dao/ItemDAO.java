@@ -1,55 +1,144 @@
 package database.dao;
 
 import database.DatabaseConnection;
+
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
 public class ItemDAO {
 
-    /**
-     * Lấy danh sách tên vật phẩm đơn giản.
-     */
-    public List<String> getAllItemNames() {
-        List<String> items = new ArrayList<>();
-        String sql = "SELECT name FROM items";
+    // =====================================================
+    // ADD ITEM
+    // =====================================================
+    public int addItem(String name, String description, double startPrice,
+                       String category, String condition, int durationMins,
+                       int ownerId, double minStep) {
+        String sql = "INSERT INTO items(name, description, starting_price, current_price, " +
+                "min_step, seller_id, status) VALUES (?, ?, ?, ?, ?, ?, ?)";
         try (Connection conn = DatabaseConnection.getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
-            while (rs.next()) {
-                items.add(rs.getString("name"));
+             PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            pstmt.setString(1, name);
+            pstmt.setString(2, description);
+            pstmt.setDouble(3, startPrice);
+            pstmt.setDouble(4, startPrice);
+            pstmt.setDouble(5, minStep);
+            pstmt.setInt(6, ownerId);
+            pstmt.setString(7, "OPEN");
+            int rows = pstmt.executeUpdate();
+            if (rows > 0) {
+                ResultSet rs = pstmt.getGeneratedKeys();
+                if (rs.next()) return rs.getInt(1);
             }
         } catch (SQLException e) {
-            System.err.println("[ItemDAO] getAllItemNames thất bại: " + e.getMessage());
+            e.printStackTrace();
         }
-        return items;
+        return -1;
     }
 
-    /**
-     * Lấy danh sách vật phẩm đầy đủ thông tin (Item objects).
-     * Join với bảng auctions để lấy auction_id thật.
-     */
+    public int addItem(String name, String description, double startPrice,
+                       String category, String condition, int durationMins, int ownerId) {
+        return addItem(name, description, startPrice, category, condition, durationMins, ownerId, 1_000_000.0);
+    }
 
+    // =====================================================
+    // UPDATE ITEM – Sửa sản phẩm
+    // =====================================================
+    public boolean updateItem(int itemId, String name, String description,
+                              double startPrice, double minStep) {
+        String sql = "UPDATE items SET name = ?, description = ?, " +
+                "starting_price = ?, min_step = ? WHERE item_id = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, name);
+            pstmt.setString(2, description);
+            pstmt.setDouble(3, startPrice);
+            pstmt.setDouble(4, minStep);
+            pstmt.setInt(5, itemId);
+            return pstmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
 
-    /**
-     * Lấy danh sách vật phẩm kèm auction_id — dành riêng cho BidderDashboard.
-     */
+    // =====================================================
+    // DELETE ITEM – Xóa sản phẩm
+    // =====================================================
+    public boolean deleteItem(int itemId) {
+        // Xóa theo thứ tự: bids → auctions → items (tránh lỗi foreign key)
+        String deleteBidsSql    = "DELETE FROM bids WHERE auction_id IN " +
+                "(SELECT auction_id FROM auctions WHERE item_id = ?)";
+        String deleteAuctionSql = "DELETE FROM auctions WHERE item_id = ?";
+        String deleteItemSql    = "DELETE FROM items WHERE item_id = ?";
+
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                // 1. Xóa bids liên quan
+                PreparedStatement s1 = conn.prepareStatement(deleteBidsSql);
+                s1.setInt(1, itemId);
+                s1.executeUpdate();
+
+                // 2. Xóa auctions liên quan
+                PreparedStatement s2 = conn.prepareStatement(deleteAuctionSql);
+                s2.setInt(1, itemId);
+                s2.executeUpdate();
+
+                // 3. Xóa item
+                PreparedStatement s3 = conn.prepareStatement(deleteItemSql);
+                s3.setInt(1, itemId);
+                int rows = s3.executeUpdate();
+
+                conn.commit();
+                return rows > 0;
+
+            } catch (SQLException e) {
+                conn.rollback();
+                e.printStackTrace();
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    // =====================================================
+    // GET ITEMS BY SELLER – Lấy danh sách item của seller
+    // =====================================================
+    public List<int[]> getItemIdsBySeller(int sellerId) {
+        // Trả về list [item_id] của seller
+        List<int[]> ids = new ArrayList<>();
+        String sql = "SELECT item_id FROM items WHERE seller_id = ? ORDER BY item_id DESC";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, sellerId);
+            ResultSet rs = pstmt.executeQuery();
+            while (rs.next()) {
+                ids.add(new int[]{rs.getInt("item_id")});
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return ids;
+    }
+
+    // =====================================================
+    // GET ALL AUCTION ITEMS – Dùng cho BidderDashboard
+    // =====================================================
     public List<AuctionItemInfo> getAllAuctionItems() {
         List<AuctionItemInfo> list = new ArrayList<>();
-        String sql =
-                "SELECT i.item_id, i.name, i.description, i.starting_price, " +
-                        "i.current_price, i.min_step, i.status, " +
-                        "COALESCE(u.username, 'Ẩn danh') AS seller_name, " +
-                        "COALESCE(a.auction_id, -1) AS auction_id " +
-                        "FROM items i " +
-                        "LEFT JOIN users u ON i.seller_id = u.user_id " +
-                        "LEFT JOIN auctions a ON a.item_id = i.item_id AND a.status = 'OPEN' " +
-                        "ORDER BY i.item_id DESC";
-
+        String sql = "SELECT i.item_id, i.name, i.description, i.starting_price, " +
+                "i.current_price, i.min_step, i.status, " +
+                "COALESCE(u.username, 'Ẩn danh') AS seller_name, " +
+                "COALESCE(a.auction_id, -1) AS auction_id " +
+                "FROM items i " +
+                "LEFT JOIN users u ON i.seller_id = u.user_id " +
+                "LEFT JOIN auctions a ON a.item_id = i.item_id AND a.status = 'OPEN' " +
+                "ORDER BY i.item_id DESC";
         try (Connection conn = DatabaseConnection.getConnection();
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
-
             while (rs.next()) {
                 AuctionItemInfo info = new AuctionItemInfo();
                 info.itemId       = rs.getInt("item_id");
@@ -64,101 +153,43 @@ public class ItemDAO {
                 list.add(info);
             }
         } catch (SQLException e) {
-            System.err.println("[ItemDAO] getAllAuctionItems thất bại: " + e.getMessage());
+            e.printStackTrace();
         }
         return list;
     }
 
-    /**
-     * Lấy danh sách vật phẩm định dạng chuỗi (giữ lại cho tương thích ngược).
-     */
-    public List<String> getAllItemsFormatted() {
-        List<String> items = new ArrayList<>();
-        String sql =
-                "SELECT i.item_id, i.name, i.starting_price, i.status, " +
-                        "COALESCE(u.username, 'Ẩn danh') AS seller_name " +
-                        "FROM items i " +
-                        "LEFT JOIN users u ON i.seller_id = u.user_id " +
-                        "ORDER BY i.item_id DESC";
-
+    // =====================================================
+    // GET ITEMS BY SELLER – Dùng cho SellerDashboard
+    // =====================================================
+    public List<AuctionItemInfo> getItemsBySeller(int sellerId) {
+        List<AuctionItemInfo> list = new ArrayList<>();
+        String sql = "SELECT i.item_id, i.name, i.description, i.starting_price, " +
+                "i.current_price, i.min_step, i.status, " +
+                "COALESCE(a.auction_id, -1) AS auction_id " +
+                "FROM items i " +
+                "LEFT JOIN auctions a ON a.item_id = i.item_id " +
+                "WHERE i.seller_id = ? ORDER BY i.item_id DESC";
         try (Connection conn = DatabaseConnection.getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
-
-            java.text.NumberFormat fmt =
-                    java.text.NumberFormat.getNumberInstance(new java.util.Locale("vi", "VN"));
-
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, sellerId);
+            ResultSet rs = pstmt.executeQuery();
             while (rs.next()) {
-                String name   = rs.getString("name");
-                double price  = rs.getDouble("starting_price");
-                String seller = rs.getString("seller_name");
-                String status = rs.getString("status");
-                if (status == null) status = "Đang đấu giá";
-
-                String line = String.format("🏷 %s  |  %s ₫  |  👤 %s  |  %s",
-                        name, fmt.format((long) price), seller, status);
-                items.add(line);
-            }
-        } catch (SQLException e) {
-            System.err.println("[ItemDAO] getAllItemsFormatted thất bại: " + e.getMessage());
-        }
-        return items;
-    }
-
-    /**
-     * Thêm vật phẩm mới vào DB (dùng cho SellerDashboard).
-     * Lưu cả min_step.
-     */
-    public int addItem(
-            String name,
-            String description,
-            double startPrice,
-            String category,
-            String condition,
-            int durationMins,
-            int ownerId,
-            double minStep
-    ) {
-        String sql =
-                "INSERT INTO items(" +
-                        "name, description, starting_price, current_price, min_step, seller_id, status" +
-                        ") VALUES (?, ?, ?, ?, ?, ?, ?)";
-
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-
-            pstmt.setString(1, name);
-            pstmt.setString(2, description);
-            pstmt.setDouble(3, startPrice);
-            pstmt.setDouble(4, startPrice);
-            pstmt.setDouble(5, minStep);
-            pstmt.setInt(6, ownerId);
-            pstmt.setString(7, "OPEN");
-
-            int rows = pstmt.executeUpdate();
-            if (rows > 0) {
-                ResultSet rs = pstmt.getGeneratedKeys();
-                if (rs.next()) return rs.getInt(1);
+                AuctionItemInfo info = new AuctionItemInfo();
+                info.itemId       = rs.getInt("item_id");
+                info.auctionId    = rs.getInt("auction_id");
+                info.name         = rs.getString("name");
+                info.description  = rs.getString("description");
+                info.startPrice   = rs.getDouble("starting_price");
+                info.currentPrice = rs.getDouble("current_price");
+                info.minStep      = rs.getDouble("min_step");
+                info.status       = rs.getString("status");
+                info.sellerName   = "Bạn";
+                list.add(info);
             }
         } catch (SQLException e) {
             e.printStackTrace();
         }
-        return -1;
-    }
-
-    /**
-     * Giữ lại method cũ (6 tham số) cho tương thích — dùng minStep mặc định 1 triệu.
-     */
-    public int addItem(
-            String name,
-            String description,
-            double startPrice,
-            String category,
-            String condition,
-            int durationMins,
-            int ownerId
-    ) {
-        return addItem(name, description, startPrice, category, condition, durationMins, ownerId, 1_000_000.0);
+        return list;
     }
 
     public int getLastInsertedItemId() {
@@ -168,56 +199,17 @@ public class ItemDAO {
              ResultSet rs = pstmt.executeQuery()) {
             if (rs.next()) return rs.getInt("latest_id");
         } catch (SQLException e) {
-            System.out.println(e.getMessage());
+            e.printStackTrace();
         }
         return -1;
     }
 
-    /**
-     * Xóa vật phẩm theo item_id, bao gồm cả bids và auctions liên quan.
-     * Xóa theo thứ tự: bids → auctions → items để tránh lỗi foreign key.
-     */
-    public boolean deleteItem(int itemId) {
-        try (Connection conn = DatabaseConnection.getConnection()) {
-            conn.setAutoCommit(false);
-            try {
-                // 1. Xóa bids liên quan đến auctions của item
-                PreparedStatement ps1 = conn.prepareStatement(
-                        "DELETE FROM bids WHERE auction_id IN " +
-                                "(SELECT auction_id FROM auctions WHERE item_id = ?)");
-                ps1.setInt(1, itemId);
-                ps1.executeUpdate();
-
-                // 2. Xóa auctions của item
-                PreparedStatement ps2 = conn.prepareStatement(
-                        "DELETE FROM auctions WHERE item_id = ?");
-                ps2.setInt(1, itemId);
-                ps2.executeUpdate();
-
-                // 3. Xóa item
-                PreparedStatement ps3 = conn.prepareStatement(
-                        "DELETE FROM items WHERE item_id = ?");
-                ps3.setInt(1, itemId);
-                int rows = ps3.executeUpdate();
-
-                conn.commit();
-                return rows > 0;
-            } catch (SQLException e) {
-                conn.rollback();
-                throw e;
-            }
-        } catch (SQLException e) {
-            System.err.println("[ItemDAO] deleteItem thất bại: " + e.getMessage());
-            return false;
-        }
-    }
-
-    /**
-     * Data class chứa đầy đủ thông tin item + auction_id để BidderDashboard dùng.
-     */
+    // =====================================================
+    // DATA CLASS
+    // =====================================================
     public static class AuctionItemInfo {
-        public int itemId;
-        public int auctionId;   // auction_id thật từ bảng auctions (-1 nếu chưa có)
+        public int    itemId;
+        public int    auctionId;
         public String name;
         public String description;
         public double startPrice;

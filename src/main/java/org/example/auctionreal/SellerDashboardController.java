@@ -1,5 +1,8 @@
 package org.example.auctionreal;
 
+import database.dao.AuctionDAO;
+import database.dao.ItemDAO;
+import database.dao.ItemDAO.AuctionItemInfo;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -11,37 +14,25 @@ import javafx.stage.Stage;
 import user.User;
 
 import java.io.IOException;
-import java.text.NumberFormat;
-import java.util.Locale;
-import database.dao.ItemDAO;
-import database.dao.AuctionDAO;
-
 import java.sql.Timestamp;
+import java.text.NumberFormat;
+import java.util.List;
+import java.util.Locale;
 
-/**
- * SellerDashboardController: Xử lý màn hình dành cho Người Bán (Seller).
- * Cho phép Seller đăng vật phẩm muốn bán đấu giá và xem danh sách vật phẩm đã đăng.
- */
 public class SellerDashboardController {
 
-    // ===== Các phần tử UI (phải khớp fx:id trong seller-dashboard.fxml) =====
-
-    // Thanh trên
-    @FXML private Label lblUserInfo;
-
-    // Form đăng vật phẩm
+    // ── Form đăng sản phẩm ──
+    @FXML private Label    lblUserInfo;
     @FXML private TextField txtItemName;
     @FXML private TextArea  txtDescription;
     @FXML private TextField txtStartPrice;
     @FXML private TextField txtMinStep;
     @FXML private TextField txtDurationHours;
     @FXML private ComboBox<String> cmbCategory;
-    @FXML private RadioButton rbNew;
-    @FXML private RadioButton rbLikeNew;
-    @FXML private RadioButton rbUsed;
+    @FXML private RadioButton rbNew, rbLikeNew, rbUsed;
     @FXML private Label lblMessage;
 
-    // Cột phải – danh sách vật phẩm
+    // ── Danh sách sản phẩm ──
     @FXML private Label lblItemCount;
     @FXML private Label lblTotalItems;
     @FXML private Label lblActiveAuctions;
@@ -49,355 +40,282 @@ public class SellerDashboardController {
     @FXML private TextField txtSearch;
     @FXML private ListView<String> listMyItems;
 
-    // ===== Dữ liệu nội bộ =====
     private final ToggleGroup conditionGroup = new ToggleGroup();
-    private int totalItems   = 0;
-    private int activeCount  = 0;
-    private int soldCount    = 0;
+    private final NumberFormat fmt = NumberFormat.getNumberInstance(new Locale("vi", "VN"));
 
-    private final NumberFormat currencyFormat =
-            NumberFormat.getNumberInstance(new Locale("vi", "VN"));
+    /** Danh sách item từ DB của seller này */
+    private List<AuctionItemInfo> myItems;
 
-    // ===== Khởi tạo =====
-
+    // =====================================================
+    // INITIALIZE
+    // =====================================================
     @FXML
     public void initialize() {
-        // Hiển thị thông tin người dùng
         User user = RegisterController.currentUser;
-        if (user != null) {
-            lblUserInfo.setText("🏪 " + user.getUsername() + "  |  SELLER");
-        } else {
-            lblUserInfo.setText("🏪 Người bán");
-        }
+        lblUserInfo.setText(user != null
+                ? "🏪 " + user.getUsername() + "  |  SELLER"
+                : "🏪 Người bán");
 
-        // Nhóm RadioButton
         rbNew.setToggleGroup(conditionGroup);
         rbLikeNew.setToggleGroup(conditionGroup);
         rbUsed.setToggleGroup(conditionGroup);
-        rbLikeNew.setSelected(true); // mặc định
+        rbLikeNew.setSelected(true);
 
-        // Đổ dữ liệu danh mục
         cmbCategory.getItems().addAll(
-                "Đồng hồ cao cấp",
-                "Điện tử & Công nghệ",
-                "Trang sức & Đá quý",
-                "Xe cộ",
-                "Nghệ thuật & Sưu tầm",
-                "Túi xách & Thời trang",
-                "Bất động sản",
-                "Khác"
+                "Đồng hồ cao cấp", "Điện tử & Công nghệ",
+                "Trang sức & Đá quý", "Xe cộ",
+                "Nghệ thuật & Sưu tầm", "Túi xách & Thời trang",
+                "Bất động sản", "Khác"
         );
 
-        // Cập nhật số liệu ban đầu
+        loadMyItems();
+    }
+
+    // =====================================================
+    // LOAD ITEMS TỪ DB
+    // =====================================================
+    private void loadMyItems() {
+        User user = RegisterController.currentUser;
+        if (user == null) return;
+
+        ItemDAO dao = new ItemDAO();
+        myItems = dao.getItemsBySeller(user.getId());
+
+        listMyItems.getItems().clear();
+        for (AuctionItemInfo item : myItems) {
+            listMyItems.getItems().add(formatItem(item));
+        }
         refreshStats();
     }
 
-    // ===== XỬ LÝ SỰ KIỆN FORM =====
+    private String formatItem(AuctionItemInfo item) {
+        return String.format("🏷 %s  |  %s ₫  |  Bước: %s ₫  |  %s",
+                item.name,
+                fmt.format((long) item.currentPrice),
+                fmt.format((long) item.minStep),
+                item.status);
+    }
 
-    /**
-     * handlePostItem: Khi nhấn nút "ĐĂNG VẬT PHẨM ĐẤU GIÁ".
-     * Kiểm tra dữ liệu nhập vào và thêm vật phẩm vào danh sách.
-     */
+    // =====================================================
+    // ĐĂNG SẢN PHẨM MỚI
+    // =====================================================
     @FXML
     void handlePostItem(ActionEvent event) {
+        String name       = txtItemName.getText().trim();
+        String desc       = txtDescription.getText().trim();
+        String priceStr   = txtStartPrice.getText().trim().replaceAll("[.,\\s]", "");
+        String stepStr    = txtMinStep.getText().trim().replaceAll("[.,\\s]", "");
+        String durStr     = txtDurationHours.getText().trim();
 
-        // ─────────────────────────────
-        // VALIDATE INPUT
-        // ─────────────────────────────
-
-        String name =
-                txtItemName.getText().trim();
-
-        String desc =
-                txtDescription.getText().trim();
-
-        String priceStr =
-                txtStartPrice.getText()
-                        .trim()
-                        .replaceAll("[.,\\s]", "");
-
-        String stepStr =
-                txtMinStep.getText()
-                        .trim()
-                        .replaceAll("[.,\\s]", "");
-
-        String durationStr =
-                txtDurationHours.getText()
-                        .trim();
-
-        if (
-
-                name.isEmpty()
-                        || desc.isEmpty()
-                        || priceStr.isEmpty()
-                        || stepStr.isEmpty()
-                        || durationStr.isEmpty()
-
-        ) {
-
-            showMessage(
-                    "⚠ Vui lòng nhập đầy đủ thông tin!",
-                    false
-            );
-
+        if (name.isEmpty() || desc.isEmpty() || priceStr.isEmpty()
+                || stepStr.isEmpty() || durStr.isEmpty()) {
+            showMessage("⚠ Vui lòng nhập đầy đủ thông tin!", false);
             return;
         }
 
-        // ─────────────────────────────
-        // PARSE NUMBER
-        // ─────────────────────────────
-
-        double startPrice;
-        double minStep;
+        double startPrice, minStep;
         int durationMinutes;
-
         try {
-
-            startPrice =
-                    Double.parseDouble(priceStr);
-
-            minStep =
-                    Double.parseDouble(stepStr);
-
-            durationMinutes =
-                    Integer.parseInt(durationStr);
-
+            startPrice      = Double.parseDouble(priceStr);
+            minStep         = Double.parseDouble(stepStr);
+            durationMinutes = Integer.parseInt(durStr);
         } catch (NumberFormatException e) {
-
-            showMessage(
-                    "❌ Giá và thời gian phải là số!",
-                    false
-            );
-
+            showMessage("❌ Giá và thời gian phải là số!", false);
             return;
         }
 
-        // ─────────────────────────────
-        // CONDITION
-        // ─────────────────────────────
+        String condition = rbNew.isSelected() ? "Mới 100%"
+                : rbLikeNew.isSelected() ? "Như mới" : "Đã qua sử dụng";
+        String category  = cmbCategory.getValue() != null ? cmbCategory.getValue() : "Khác";
 
-        String condition =
-                "Đã qua sử dụng";
-
-        if (rbNew.isSelected()) {
-
-            condition = "Mới 100%";
-        }
-
-        if (rbLikeNew.isSelected()) {
-
-            condition = "Như mới";
-        }
-
-        // ─────────────────────────────
-        // CATEGORY
-        // ─────────────────────────────
-
-        String category =
-                cmbCategory.getValue();
-
-        if (category == null) {
-
-            category = "Khác";
-        }
-
-        // ─────────────────────────────
-        // CURRENT USER
-        // ─────────────────────────────
-
-        User user =
-                RegisterController.currentUser;
-
-        if (user == null) {
-
-            showMessage(
-                    "❌ Chưa đăng nhập!",
-                    false
-            );
-
-            return;
-        }
+        User user = RegisterController.currentUser;
+        if (user == null) { showMessage("❌ Chưa đăng nhập!", false); return; }
 
         int sellerId = user.getId();
 
-        // ─────────────────────────────
-        // CREATE ITEM
-        // ─────────────────────────────
+        ItemDAO itemDAO = new ItemDAO();
+        int itemId = itemDAO.addItem(name, desc, startPrice, category,
+                condition, durationMinutes, sellerId, minStep);
+        if (itemId == -1) { showMessage("❌ Không thể tạo vật phẩm!", false); return; }
 
-        ItemDAO itemDAO =
-                new ItemDAO();
+        AuctionDAO auctionDAO = new AuctionDAO();
+        Timestamp now     = new Timestamp(System.currentTimeMillis());
+        Timestamp endTime = new Timestamp(System.currentTimeMillis() + (long) durationMinutes * 60 * 1000);
+        auctionDAO.createAuction(itemId, now, endTime, startPrice);
 
+        showMessage("✅ Đăng vật phẩm thành công!", true);
+        clearFormFields();
+        loadMyItems(); // Reload danh sách từ DB
+    }
 
-        int itemId =
-
-                itemDAO.addItem(
-
-                        name,
-
-                        desc,
-
-                        startPrice,
-
-                        category,
-
-                        condition,
-
-                        durationMinutes,
-
-                        sellerId,
-
-                        minStep  // ← lưu bước giá vào DB
-                );
-
-        if (itemId == -1) {
-
-            showMessage(
-                    "❌ Không thể tạo vật phẩm!",
-                    false
-            );
-
+    // =====================================================
+    // SỬA SẢN PHẨM
+    // =====================================================
+    @FXML
+    void handleEditItem(ActionEvent event) {
+        int idx = listMyItems.getSelectionModel().getSelectedIndex();
+        if (idx < 0 || idx >= myItems.size()) {
+            showMessage("⚠ Vui lòng chọn sản phẩm muốn sửa!", false);
             return;
         }
 
-        // ─────────────────────────────
-        // CREATE AUCTION (tạo phiên đấu giá thật trong bảng auctions)
-        // ─────────────────────────────
-        AuctionDAO auctionDAO = new AuctionDAO();
-        java.sql.Timestamp now = new java.sql.Timestamp(System.currentTimeMillis());
-        java.sql.Timestamp endTime = new java.sql.Timestamp(
-                System.currentTimeMillis() + (long) durationMinutes * 60 * 1000
-        );
-        boolean auctionCreated = auctionDAO.createAuction(itemId, now, endTime, startPrice);
-        if (!auctionCreated) {
-            showMessage("⚠ Item đã tạo nhưng không tạo được phiên đấu giá!", false);
+        AuctionItemInfo selected = myItems.get(idx);
+
+        // Kiểm tra đã có người đặt giá chưa
+        if (selected.currentPrice > selected.startPrice) {
+            showMessage("❌ Không thể sửa sản phẩm đã có người đặt giá!", false);
+            return;
         }
 
-        // ─────────────────────────────
-        // UPDATE UI
-        // ─────────────────────────────
+        // Điền thông tin vào form để sửa
+        txtItemName.setText(selected.name);
+        txtDescription.setText(selected.description != null ? selected.description : "");
+        txtStartPrice.setText(String.valueOf((long) selected.startPrice));
+        txtMinStep.setText(String.valueOf((long) selected.minStep));
 
-        String entry =
+        showMessage("✏ Đã tải thông tin sản phẩm. Sửa xong nhấn 'LƯU SỬA'.", true);
 
-                String.format(
+        // Đổi nút thành "Lưu sửa" tạm thời — dùng Alert để confirm
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+        confirm.setTitle("Sửa sản phẩm");
+        confirm.setHeaderText("Sửa: " + selected.name);
+        confirm.setContentText("Nhấn OK sau khi bạn đã chỉnh sửa thông tin trong form bên trái.");
+        confirm.showAndWait().ifPresent(response -> {
+            if (response == ButtonType.OK) {
+                String newName  = txtItemName.getText().trim();
+                String newDesc  = txtDescription.getText().trim();
+                String newPrice = txtStartPrice.getText().trim().replaceAll("[.,\\s]", "");
+                String newStep  = txtMinStep.getText().trim().replaceAll("[.,\\s]", "");
 
-                        "🏷 %s | %s ₫ | %s | %d phút",
+                if (newName.isEmpty() || newDesc.isEmpty()
+                        || newPrice.isEmpty() || newStep.isEmpty()) {
+                    showMessage("⚠ Vui lòng điền đầy đủ thông tin!", false);
+                    return;
+                }
 
-                        name,
-
-                        currencyFormat.format(
-                                (long) startPrice
-                        ),
-
-                        condition,
-
-                        durationMinutes
-                );
-
-        listMyItems
-                .getItems()
-                .add(0, entry);
-
-        totalItems++;
-
-        activeCount++;
-
-        refreshStats();
-
-        // ─────────────────────────────
-        // SUCCESS MESSAGE
-        // ─────────────────────────────
-
-        showMessage(
-
-                "✅ Đăng vật phẩm thành công!",
-
-                true
-        );
-
-        // ─────────────────────────────
-        // CLEAR FORM
-        // ─────────────────────────────
-
-        clearFormFields();
+                try {
+                    double price = Double.parseDouble(newPrice);
+                    double step  = Double.parseDouble(newStep);
+                    ItemDAO dao  = new ItemDAO();
+                    boolean ok   = dao.updateItem(selected.itemId, newName, newDesc, price, step);
+                    if (ok) {
+                        showMessage("✅ Sửa sản phẩm thành công!", true);
+                        clearFormFields();
+                        loadMyItems();
+                    } else {
+                        showMessage("❌ Sửa thất bại!", false);
+                    }
+                } catch (NumberFormatException e) {
+                    showMessage("❌ Giá không hợp lệ!", false);
+                }
+            }
+        });
     }
+
+    // =====================================================
+    // XÓA SẢN PHẨM
+    // =====================================================
+    @FXML
+    void handleWithdrawItem(ActionEvent event) {
+        int idx = listMyItems.getSelectionModel().getSelectedIndex();
+        if (idx < 0 || idx >= myItems.size()) {
+            showMessage("⚠ Vui lòng chọn sản phẩm muốn xóa!", false);
+            return;
+        }
+
+        AuctionItemInfo selected = myItems.get(idx);
+
+        // Cảnh báo nếu đã có người đặt giá
+        String warning = selected.currentPrice > selected.startPrice
+                ? "\n⚠ Cảnh báo: Đã có người đặt giá! Xóa sẽ hủy toàn bộ lịch sử đặt giá."
+                : "";
+
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+        confirm.setTitle("Xác nhận xóa");
+        confirm.setHeaderText("Xóa sản phẩm: " + selected.name + "?");
+        confirm.setContentText("Hành động này không thể hoàn tác." + warning);
+
+        confirm.showAndWait().ifPresent(response -> {
+            if (response == ButtonType.OK) {
+                ItemDAO dao = new ItemDAO();
+                boolean ok  = dao.deleteItem(selected.itemId);
+                if (ok) {
+                    showMessage("✅ Đã xóa sản phẩm: " + selected.name, true);
+                    loadMyItems();
+                } else {
+                    showMessage("❌ Xóa thất bại!", false);
+                }
+            }
+        });
+    }
+
+    // =====================================================
+    // TÌM KIẾM
+    // =====================================================
+    @FXML
+    void handleFilter(ActionEvent event) {
+        String keyword = txtSearch.getText().trim().toLowerCase();
+        listMyItems.getItems().clear();
+        for (AuctionItemInfo item : myItems) {
+            if (keyword.isEmpty() || item.name.toLowerCase().contains(keyword)) {
+                listMyItems.getItems().add(formatItem(item));
+            }
+        }
+    }
+
+    @FXML
+    void handleViewItem(ActionEvent event) {
+        int idx = listMyItems.getSelectionModel().getSelectedIndex();
+        if (idx < 0 || idx >= myItems.size()) {
+            showMessage("⚠ Chọn sản phẩm để xem chi tiết!", false);
+            return;
+        }
+        AuctionItemInfo item = myItems.get(idx);
+        Alert info = new Alert(Alert.AlertType.INFORMATION);
+        info.setTitle("Chi tiết sản phẩm");
+        info.setHeaderText(item.name);
+        info.setContentText(
+                "Mô tả: " + item.description + "\n" +
+                        "Giá khởi điểm: " + fmt.format((long) item.startPrice) + " ₫\n" +
+                        "Giá hiện tại: "  + fmt.format((long) item.currentPrice) + " ₫\n" +
+                        "Bước giá: "      + fmt.format((long) item.minStep) + " ₫\n" +
+                        "Trạng thái: "    + item.status
+        );
+        info.showAndWait();
+    }
+
     @FXML
     void handleClearForm(ActionEvent event) {
         clearFormFields();
         lblMessage.setText("");
     }
 
-    /**
-     * handleFilter: Lọc danh sách vật phẩm theo từ khoá tìm kiếm.
-     */
-    @FXML
-    void handleFilter(ActionEvent event) {
-        String keyword = txtSearch.getText().trim().toLowerCase();
-        // TODO: Kết nối database để lọc thật sự
-        // Hiện tại chỉ hiển thị thông báo demo
-        if (keyword.isEmpty()) {
-            showMessage("💡 Nhập từ khoá để lọc danh sách.", false);
-        } else {
-            showMessage("🔍 Đang lọc theo: \"" + keyword + "\"", true);
-        }
-    }
-
-    /**
-     * handleViewItem: Xem chi tiết vật phẩm được chọn trong ListView.
-     */
-    @FXML
-    void handleViewItem(ActionEvent event) {
-        String selected = listMyItems.getSelectionModel().getSelectedItem();
-        if (selected == null) {
-            showMessage("⚠ Vui lòng chọn một vật phẩm để xem chi tiết.", false);
-            return;
-        }
-        showMessage("👁 Đang xem: " + selected.substring(0, Math.min(60, selected.length())) + "...", true);
-        // TODO: Mở cửa sổ chi tiết vật phẩm
-    }
-
-    /**
-     * handleWithdrawItem: Rút vật phẩm khỏi sàn đấu giá.
-     */
-    @FXML
-    void handleWithdrawItem(ActionEvent event) {
-        int selectedIndex = listMyItems.getSelectionModel().getSelectedIndex();
-        if (selectedIndex < 0) {
-            showMessage("⚠ Vui lòng chọn vật phẩm muốn rút.", false);
-            return;
-        }
-
-        // Xác nhận trước khi rút
-        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
-        confirm.setTitle("Xác nhận rút vật phẩm");
-        confirm.setHeaderText("Bạn có chắc muốn rút vật phẩm này khỏi sàn?");
-        confirm.setContentText("Hành động này không thể hoàn tác nếu đã có người đặt giá.");
-        confirm.showAndWait().ifPresent(response -> {
-            if (response == ButtonType.OK) {
-                listMyItems.getItems().remove(selectedIndex);
-                if (totalItems > 0) totalItems--;
-                if (activeCount > 0) activeCount--;
-                refreshStats();
-                showMessage("✅ Đã rút vật phẩm khỏi sàn đấu giá.", true);
-            }
-        });
-    }
-
-    /**
-     * handleBack: Quay về màn hình chọn vai trò.
-     */
     @FXML
     void handleBack(ActionEvent event) throws IOException {
         Parent root = FXMLLoader.load(getClass().getResource("role-selection.fxml"));
         Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
         stage.setMaximized(false);
         stage.setScene(new Scene(root, 600, 400));
-        stage.setMinWidth(600);
-        stage.setMinHeight(400);
+        stage.setMinWidth(600); stage.setMinHeight(400);
         stage.setTitle("Lựa chọn vai trò");
         stage.show();
     }
 
-    // ===== TIỆN ÍCH PRIVATE =====
+    // =====================================================
+    // HELPERS
+    // =====================================================
+    private void refreshStats() {
+        int total  = myItems != null ? myItems.size() : 0;
+        long active = myItems != null
+                ? myItems.stream().filter(i -> "OPEN".equals(i.status)).count() : 0;
+        long sold  = myItems != null
+                ? myItems.stream().filter(i -> "CLOSED".equals(i.status)).count() : 0;
+
+        lblItemCount.setText(total + " vật phẩm");
+        lblTotalItems.setText(String.valueOf(total));
+        lblActiveAuctions.setText(String.valueOf(active));
+        lblSoldItems.setText(String.valueOf(sold));
+    }
 
     private void clearFormFields() {
         txtItemName.clear();
@@ -409,18 +327,10 @@ public class SellerDashboardController {
         rbLikeNew.setSelected(true);
     }
 
-    private void refreshStats() {
-        lblItemCount.setText(totalItems + " vật phẩm");
-        lblTotalItems.setText(String.valueOf(totalItems));
-        lblActiveAuctions.setText(String.valueOf(activeCount));
-        lblSoldItems.setText(String.valueOf(soldCount));
-    }
-
-    private void showMessage(String msg, boolean isSuccess) {
+    private void showMessage(String msg, boolean ok) {
         lblMessage.setText(msg);
-        lblMessage.setStyle(isSuccess
+        lblMessage.setStyle(ok
                 ? "-fx-text-fill: #4af0a0; -fx-font-size: 13px; -fx-font-weight: bold;"
-                : "-fx-text-fill: #ff7777; -fx-font-size: 13px; -fx-font-weight: bold;"
-        );
+                : "-fx-text-fill: #ff7777; -fx-font-size: 13px; -fx-font-weight: bold;");
     }
 }
