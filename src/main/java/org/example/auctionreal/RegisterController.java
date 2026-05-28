@@ -1,6 +1,8 @@
 package org.example.auctionreal;
+
 import database.UserDAO;
 import user.Bidder;
+import user.Seller;
 import user.User;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -18,98 +20,102 @@ import java.net.URL;
 
 public class RegisterController {
 
+    // Khai báo biến toàn cục
+    public static User currentUser;
+
     @FXML private TextField txtId;
     @FXML private TextField txtUsername;
     @FXML private PasswordField txtPassword;
 
-    public static User currentUser;
-
     @FXML
     void handleRegister(ActionEvent event) {
-        String id       = txtId.getText().trim();
-        String name     = txtUsername.getText().trim();
-        String password = txtPassword.getText();
+        String id = txtId.getText().trim();
+        String name = txtUsername.getText().trim();
+        String password = txtPassword.getText().trim();
 
-        // --- Validate cơ bản ---
         if (id.isEmpty() || name.isEmpty() || password.length() < 4) {
-            showAlert(Alert.AlertType.WARNING,
-                    "Thông tin không hợp lệ",
-                    "Vui lòng kiểm tra lại!",
-                    "• ID và Tên không được để trống.\n• Mật khẩu phải có ít nhất 4 ký tự.");
+            showAlert("Loi nhap lieu", "Vui long nhap day du thong tin (mat khau it nhat 4 ky tu).");
             return;
         }
 
-        // --- Lưu vào Database ---
-        UserDAO dao  = new UserDAO();
-        int generatedId = dao.registerUser(name, password, "BIDDER"); // role mặc định BIDDER
+        UserDAO userDAO = new UserDAO();
+        String existingRole = userDAO.getRoleByLogin(name, password);
 
-        if (generatedId == -1) {
-            showAlert(Alert.AlertType.ERROR,
-                    "Đăng ký thất bại",
-                    "Không thể lưu tài khoản!",
-                    "Tên tài khoản đã tồn tại hoặc không kết nối được Database.\nKiểm tra lại MySQL và thông tin trong DatabaseConnection.java.");
-            return;
+        if (existingRole != null) {
+            System.out.println("Dang nhap thanh cong! Vai tro: " + existingRole);
+            if (existingRole.equalsIgnoreCase("SELLER")) {
+                currentUser = new Seller(id, name, password, existingRole);
+            } else {
+                currentUser = new Bidder(id, name, password, 50000000.0);
+            }
+            chuyenTrang(event);
+
+        } else {
+            // ĐÃ SỬA LỖI INT/BOOLEAN Ở ĐÂY: Ép kiểu để tương thích 100% với UserDAO của bạn
+            int rowsAffected = userDAO.registerUser(name, password, "BIDDER");
+            boolean isRegistered = (rowsAffected > 0);
+
+            if (isRegistered) {
+                System.out.println("Dang ky tai khoan moi thanh cong!");
+                currentUser = new Bidder(id, name, password, 50000000.0);
+                chuyenTrang(event);
+            } else {
+                showAlert("Loi he thong", "Tai khoan da ton tai hoac mat khau sai!");
+            }
         }
+    }
 
-        // --- Lưu vào bộ nhớ để dùng ở các màn hình sau ---
-        currentUser = new Bidder(generatedId, name, password, 0.0);
-        System.out.println("[Register] Đăng ký thành công: " + currentUser);
-
-        showAlert(Alert.AlertType.INFORMATION,
-                "Đăng ký thành công",
-                "Chào mừng " + name + "!",
-                "Tài khoản của bạn đã được tạo thành công.\nBây giờ hãy chọn vai trò của bạn.");
-
+    private void chuyenTrang(ActionEvent event) {
         try {
             switchToRoleSelection(event);
         } catch (IOException e) {
-            System.err.println("Lỗi chuyển màn hình: " + e.getMessage());
+            System.err.println("Loi chuyen man hinh: " + e.getMessage());
             e.printStackTrace();
         }
     }
 
-    /** Hiện hộp thoại thông báo tiện ích. */
-    private void showAlert(Alert.AlertType type, String title, String header, String content) {
-        Alert alert = new Alert(type);
+    private void showAlert(String title, String content) {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
         alert.setTitle(title);
-        alert.setHeaderText(header);
+        alert.setHeaderText(null);
         alert.setContentText(content);
         alert.showAndWait();
     }
 
     private void switchToRoleSelection(ActionEvent event) throws IOException {
-        /**
-         * SỬA LỖI: "Location is required"
-         * Đảm bảo đường dẫn bắt đầu bằng dấu "/" và đi từ thư mục gốc của resources.
-         */
         String fxmlPath = "/org/example/auctionreal/role-selection.fxml";
         URL location = getClass().getResource(fxmlPath);
 
         if (location == null) {
-            throw new IOException("Không tìm thấy file FXML tại: " + fxmlPath);
+            throw new IOException("Khong tim thay file FXML: " + fxmlPath);
         }
 
-        Parent root = FXMLLoader.load(getClass().getResource("role-selection.fxml"));
+        Parent root = FXMLLoader.load(location);
         Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
         stage.setScene(new Scene(root));
-        stage.setTitle("Lựa chọn vai trò người dùng");
+        stage.setTitle("Lua chon vai tro nguoi dung");
         stage.show();
     }
 
-    /** Chuyển sang màn hình đăng nhập. */
+    // ĐÂY LÀ HÀM MỚI ĐƯỢC THÊM VÀO TRƯỚC DẤU NGOẶC KẾT THÚC
     @FXML
     void handleGoToLogin(ActionEvent event) {
         try {
-            Parent root = FXMLLoader.load(
-                    getClass().getResource("/org/example/auctionreal/hello-view.fxml"));
+            String fxmlPath = "/org/example/auctionreal/hello-view.fxml";
+            URL location = getClass().getResource(fxmlPath);
+
+            if (location == null) {
+                System.err.println("Khong tim thay file FXML: " + fxmlPath);
+                return;
+            }
+
+            Parent root = FXMLLoader.load(location);
             Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
-            stage.setScene(new Scene(root, 600, 500));
-            stage.setTitle("Hệ thống đấu giá - Đăng nhập");
+            stage.setScene(new Scene(root));
+            stage.setTitle("Dang nhap");
             stage.show();
         } catch (IOException e) {
-            System.err.println("Lỗi chuyển màn hình: " + e.getMessage());
             e.printStackTrace();
         }
     }
 }
-

@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.text.NumberFormat;
 import java.util.Locale;
 import database.dao.BidDAO;
-import database.dao.AuctionDAO;
 
 /**
  * AuctionController – Màn hình đấu giá trực tiếp.
@@ -57,14 +56,11 @@ public class AuctionController implements BidObserver {
     private double  MIN_STEP;
     private String  topBidder   = "Chưa có ai";
     private int     bidCount    = 0;
-    private int     totalSeconds;
+    private volatile int totalSeconds;
     private boolean autoBidEnabled  = false;
     private double  autoBidMaxPrice = 0;
 
-    // ── Anti-sniping: gia hạn nếu bid trong X giây cuối ──
-    private static final int SNIPE_THRESHOLD = 30;  // giây cuối
-    private static final int SNIPE_EXTENSION = 60;  // gia hạn thêm
-    private boolean extended = false;
+    // ── Anti-sniping (xử lý phía server, client chỉ hiển thị) ──
 
     // ── Timers ──
     private Timeline countdownTimer;
@@ -83,7 +79,8 @@ public class AuctionController implements BidObserver {
     public void initialize() {
         currentPrice = selectedStartPrice;
         MIN_STEP     = selectedMinStep;
-        totalSeconds = selectedDuration * 60;
+        // ★ Không tính totalSeconds local nữa → sẽ nhận từ server qua TIME_SYNC
+        totalSeconds = selectedDuration * 60; // giá trị tạm, sẽ được sync ngay khi kết nối
 
         if (lblItemName        != null) lblItemName.setText(selectedName);
         if (lblItemSubtitle    != null) lblItemSubtitle.setText(selectedSubtitle);
@@ -126,34 +123,24 @@ public class AuctionController implements BidObserver {
     }
 
     // =====================================================
-    // COUNTDOWN + ANTI-SNIPING
+    // COUNTDOWN – Hiển thị dựa trên TIME_SYNC từ server
     // =====================================================
+
+    /**
+     * Timer local chỉ dùng để hiển thị đếm ngược mượt.
+     * Giá trị totalSeconds được đồng bộ từ server qua TIME_SYNC mỗi giây.
+     * Server là nguồn thời gian chính thức (authoritative).
+     */
     private void startCountdown() {
         countdownTimer = new Timeline(new KeyFrame(Duration.seconds(1), e -> {
             if (totalSeconds > 0) {
+                // Chỉ giảm local để hiển thị mượt giữa các TIME_SYNC
                 totalSeconds--;
-                int h = totalSeconds / 3600;
-                int m = (totalSeconds % 3600) / 60;
-                int s = totalSeconds % 60;
-                lblCountdown.setText(String.format("%02d : %02d : %02d", h, m, s));
+                updateCountdownDisplay();
             } else {
-                countdownTimer.stop();
+                // Hiển thị hết giờ (server sẽ gửi AUCTION_CLOSED)
                 lblCountdown.setText("00 : 00 : 00");
                 lblCountdown.setStyle("-fx-text-fill: #ff4444; -fx-font-size: 40px; -fx-font-weight: bold;");
-
-                AuctionDAO auctionDAO = new AuctionDAO();
-                auctionDAO.closeAuction(selectedAuctionId);
-
-                BidDAO bidDAO = new BidDAO();
-                String winner = bidDAO.getWinner(selectedAuctionId);
-                showMessage("🏆 Người thắng: " + winner, true);
-                txtBidAmount.setDisable(true);
-                if (txtAutoBidMax != null) txtAutoBidMax.setDisable(true);
-                autoBidEnabled = false;
-
-                // Thông báo Observer
-                AuctionEventManager.getInstance()
-                        .notifyAuctionClosed(selectedAuctionId, winner);
             }
         }));
         countdownTimer.setCycleCount(Timeline.INDEFINITE);
@@ -161,18 +148,13 @@ public class AuctionController implements BidObserver {
     }
 
     /**
-     * Anti-sniping: nếu có bid mới trong SNIPE_THRESHOLD giây cuối
-     * → gia hạn thêm SNIPE_EXTENSION giây (chỉ 1 lần)
+     * Cập nhật hiển thị đồng hồ đếm ngược.
      */
-    private void applyAntiSniping() {
-        if (!extended && totalSeconds <= SNIPE_THRESHOLD && totalSeconds > 0) {
-            totalSeconds += SNIPE_EXTENSION;
-            extended = true;
-            showMessage("⏱ Anti-sniping! Phiên được gia hạn thêm "
-                    + SNIPE_EXTENSION + " giây!", true);
-            System.out.println("[AuctionController] Anti-sniping kích hoạt: +"
-                    + SNIPE_EXTENSION + "s");
-        }
+    private void updateCountdownDisplay() {
+        int h = totalSeconds / 3600;
+        int m = (totalSeconds % 3600) / 60;
+        int s = totalSeconds % 60;
+        lblCountdown.setText(String.format("%02d : %02d : %02d", h, m, s));
     }
 
     // =====================================================
@@ -245,7 +227,7 @@ public class AuctionController implements BidObserver {
         if (socketConnected && socketClient != null) {
             socketClient.placeBid(selectedAuctionId, bidderId, amount);
             showMessage("⏳ Đang gửi bid...", true);
-            applyAntiSniping(); // Anti-sniping khi có bid
+            // Anti-sniping bây giờ do SERVER xử lý
         } else {
             // Fallback DAO trực tiếp
             BidDAO bidDAO = new BidDAO();
@@ -259,7 +241,6 @@ public class AuctionController implements BidObserver {
                 refreshUI();
                 flashPrice();
                 showMessage("✅ Đặt giá thành công!", true);
-                applyAntiSniping(); // Anti-sniping
             } else {
                 showMessage("❌ Đặt giá thất bại!", false);
             }
@@ -293,6 +274,8 @@ public class AuctionController implements BidObserver {
         switch (parts[0]) {
             case "BID_UPDATE"     -> handleBidUpdate(message);
             case "AUCTION_CLOSED" -> handleAuctionClosed(message);
+            case "TIME_SYNC"      -> handleTimeSync(message);
+            case "ANTI_SNIPE"     -> handleAntiSnipe(message);
             case "USER_JOINED"    -> listBidHistory.getItems().add(0,
                     "👋 " + (parts.length > 1 ? message.split(":")[2] : "?") + " đã tham gia.");
             case "USER_LEFT"      -> listBidHistory.getItems().add(0,
@@ -316,8 +299,46 @@ public class AuctionController implements BidObserver {
             listBidHistory.getItems().add(0, "🔺 " + newTop + " → " + formatMoney(newPrice) + " ₫");
             refreshUI();
             flashPrice();
-            applyAntiSniping();
             tryAutoBid();
+        } catch (NumberFormatException ignored) {}
+    }
+
+    /**
+     * ★ Nhận TIME_SYNC từ server → cập nhật totalSeconds.
+     * Format: TIME_SYNC:<auctionId>:<remainingSeconds>
+     */
+    private void handleTimeSync(String message) {
+        String[] p = message.split(":");
+        if (p.length < 3) return;
+        try {
+            int auctionId = Integer.parseInt(p[1]);
+            if (auctionId != selectedAuctionId) return;
+            int serverRemaining = Integer.parseInt(p[2]);
+
+            // Đồng bộ thời gian từ server (nguồn chính thức)
+            totalSeconds = serverRemaining;
+            updateCountdownDisplay();
+
+            if (serverRemaining <= 0) {
+                lblCountdown.setText("00 : 00 : 00");
+                lblCountdown.setStyle("-fx-text-fill: #ff4444; -fx-font-size: 40px; -fx-font-weight: bold;");
+            }
+        } catch (NumberFormatException ignored) {}
+    }
+
+    /**
+     * ★ Nhận ANTI_SNIPE từ server → hiển thị thông báo gia hạn.
+     * Format: ANTI_SNIPE:<auctionId>:<extraSeconds>
+     */
+    private void handleAntiSnipe(String message) {
+        String[] p = message.split(":");
+        if (p.length < 3) return;
+        try {
+            int auctionId = Integer.parseInt(p[1]);
+            if (auctionId != selectedAuctionId) return;
+            int extraSeconds = Integer.parseInt(p[2]);
+            showMessage("⏱ Anti-sniping! Phiên được gia hạn thêm " + extraSeconds + " giây!", true);
+            System.out.println("[AuctionController] Anti-sniping từ server: +" + extraSeconds + "s");
         } catch (NumberFormatException ignored) {}
     }
 
@@ -325,7 +346,17 @@ public class AuctionController implements BidObserver {
         String[] p = message.split(":");
         if (p.length < 3) return;
         if (Integer.parseInt(p[1]) != selectedAuctionId) return;
+        totalSeconds = 0;
+        lblCountdown.setText("00 : 00 : 00");
+        lblCountdown.setStyle("-fx-text-fill: #ff4444; -fx-font-size: 40px; -fx-font-weight: bold;");
+        txtBidAmount.setDisable(true);
+        if (txtAutoBidMax != null) txtAutoBidMax.setDisable(true);
+        autoBidEnabled = false;
         showMessage("🏆 Phiên đóng! Người thắng: " + p[2], true);
+
+        // Thông báo Observer
+        AuctionEventManager.getInstance()
+                .notifyAuctionClosed(selectedAuctionId, p[2]);
     }
 
     // =====================================================
