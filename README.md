@@ -1,5 +1,5 @@
 # 🏆 AuctionReal – Hệ thống Đấu Giá Trực Tuyến
-nhóm 1
+nhóm 12 
 
 ---
 
@@ -102,58 +102,93 @@ auctionreal/
 
 ---
 
-## 4. Vị trí file JAR
+## 4. Hướng dẫn Build Executable Fat JAR
 
-Sau khi build bằng Maven, file `.jar` được tạo tại:
+Dự án sử dụng `maven-shade-plugin` được cấu hình trong `pom.xml` để tự động đóng gói tất cả mã nguồn và các thư viện phụ thuộc (JavaFX, MySQL Connector, ControlsFX,...) vào một file JAR duy nhất (Fat JAR / Uber JAR).
 
+### Cách build:
+Mở terminal tại thư mục gốc của dự án và chạy lệnh sau:
+
+* **Trên Windows:**
+  ```cmd
+  .\mvnw.cmd clean package
+  ```
+* **Trên macOS / Linux:**
+  ```bash
+  chmod +x mvnw
+  ./mvnw clean package
+  ```
+* **Hoặc nếu máy đã cài sẵn Maven:**
+  ```bash
+  mvn clean package
+  ```
+
+Sau khi build thành công, file JAR đóng gói đầy đủ sẽ được tạo ra tại:
 ```
 target/auctionreal-1.0-SNAPSHOT.jar
 ```
 
-Để build:
+---
+
+## 5. Hướng dẫn chạy chương trình
+
+### Bước 1: Thiết lập Cơ sở dữ liệu (MySQL)
+1. Khởi động MySQL Server của bạn.
+2. Mở công cụ quản lý cơ sở dữ liệu (ví dụ: **MySQL Workbench** hoặc **DBeaver**).
+3. Mở file `init.sql` nằm ở thư mục gốc của dự án và thực thi (Execute) toàn bộ script để tạo database `auctiondb_local` và các bảng dữ liệu mẫu.
+
+### Bước 2: Cấu hình thông tin kết nối Cơ sở dữ liệu
+Nếu tài khoản hoặc mật khẩu MySQL của bạn khác cấu hình mặc định, hãy cập nhật trước khi build:
+1. Mở file [DatabaseConnection.java](file:///c:/Users/PV/Documents/BTL/auctionreal/src/main/java/database/DatabaseConnection.java).
+2. Tìm dòng 21 và chỉnh sửa mật khẩu MySQL của bạn:
+   ```java
+   private static final String PASSWORD = "your_mysql_password";
+   ```
+
+### Bước 3: Khởi chạy ứng dụng bằng Executable JAR
+
+Bạn có thể chạy toàn bộ hệ thống trực tiếp từ dòng lệnh thông qua file `.jar` đã build:
+
+#### Cách 1: Khởi chạy nhanh (Được khuyến khích)
+Chỉ cần chạy lệnh sau trên terminal để khởi chạy cả **Server** (chạy ngầm trên port `9999`) và **Client thứ nhất** (giao diện đăng nhập):
 ```bash
-mvn clean package
+java -jar target/auctionreal-1.0-SNAPSHOT.jar
 ```
 
-> ⚠️ File JAR chưa được đính kèm trong repository. Vui lòng build từ source code theo hướng dẫn bên dưới.
+* Để mở thêm các **Client thứ 2, thứ 3...** nhằm kiểm thử tính năng đấu giá realtime giữa nhiều người dùng, bạn mở các tab terminal mới và chạy tiếp lệnh trên:
+  ```bash
+  java -jar target/auctionreal-1.0-SNAPSHOT.jar
+  ```
+  *(Server sẽ phát hiện cổng `9999` đã bị chiếm dụng bởi client đầu tiên, thông báo bỏ qua việc khởi động server mới và tiếp tục mở thêm cửa sổ giao diện Client một cách mượt mà).*
 
 ---
 
-## 5. Hướng dẫn chạy theo thứ tự
+#### Cách 2: Khởi chạy Server và Client riêng biệt
 
-### Bước 1: Tạo Database
-Mở **MySQL Workbench** → `File → Open SQL Script` → chọn `init.sql` → bấm **Execute**
+Nếu bạn muốn tách biệt quá trình giám sát Server và Client trên các cửa sổ terminal khác nhau:
 
-### Bước 2: Sửa mật khẩu Database
-Mở `src/main/java/database/DatabaseConnection.java`, sửa dòng:
-```java
-private static final String PASSWORD = "260707"; // ← đổi thành password MySQL của bạn
-```
+1. **Khởi chạy độc lập Auction Server:**
+   ```bash
+   java -cp target/auctionreal-1.0-SNAPSHOT.jar org.example.auctionreal.network.AuctionServer
+   ```
+   *Server sẽ chạy và lắng nghe kết nối từ các client trên port `9999`.*
 
-### Bước 3: Khởi động Server
-Trong IntelliJ, chạy class:
-```
-org.example.auctionreal.network.AuctionServer
-```
-Server khởi động trên **port 9999**. Giữ cửa sổ này mở.
+2. **Khởi chạy các cửa sổ Client (JavaFX UI):**
+   Mở một hoặc nhiều terminal khác và chạy lệnh sau để khởi động Client kết nối đến Server:
+   ```bash
+   java -cp target/auctionreal-1.0-SNAPSHOT.jar org.example.auctionreal.HelloApplication
+   ```
 
-### Bước 4: Khởi động Client
-Chạy class:
-```
-org.example.auctionreal.Launcher
-```
-Giao diện đăng nhập sẽ hiện ra.
+### Bước 4: Tài khoản đăng nhập mẫu
+Bạn có thể đăng nhập bằng các tài khoản có sẵn trong cơ sở dữ liệu mẫu:
 
-### Bước 5: Đăng nhập
-Dùng tài khoản mẫu hoặc đăng ký mới:
+| Username | Password | Vai trò | Mô tả |
+|----------|----------|---------|-------|
+| `admin` | `admin123` | **Admin** | Quản lý người dùng, xem danh sách sản phẩm |
+| `seller1` | `123456` | **Seller** | Người bán: Đăng sản phẩm mới, sửa/xóa sản phẩm của mình |
+| `bidder1` | `123456` | **Bidder** | Người mua: Tìm kiếm, theo dõi, đấu giá thủ công / tự động |
+| `bidder2` | `123456` | **Bidder** | Người mua thứ 2 (để test đấu giá đồng thời) |
 
-| Username | Password | Vai trò |
-|----------|----------|---------|
-| `admin` | `admin123` | Admin |
-| `seller1` | `123456` | Seller |
-| `bidder1` | `123456` | Bidder |
-
-> 💡 Có thể chạy nhiều cửa sổ Client cùng lúc để test đấu giá đồng thời.
 
 ---
 
@@ -188,11 +223,8 @@ Dùng tài khoản mẫu hoặc đăng ký mới:
 ---
 
 ## 7. Báo cáo & Video Demo
-
-| Tài liệu | Link |
-|----------|------|
-| 📄 Báo cáo PDF | *(Sẽ cập nhật sau)* |
-| 🎬 Video Demo | *(Sẽ cập nhật sau)* |
+| 📄 Báo cáo PDF | https://drive.google.com/file/d/1I3BRYa1FCyJF_T_SY1HIMXtXRZ5x1xUt/view?usp=sharing |
+| 🎬 Video Demo | https://drive.google.com/file/d/1y66vFxooQtfbFE7DjyDeHPTMjQ_Fimls/view?usp=sharing |
 
 ---
 
